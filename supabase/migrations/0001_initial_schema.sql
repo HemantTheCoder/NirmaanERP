@@ -135,12 +135,19 @@ ALTER TABLE public.tasks      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leaves     ENABLE ROW LEVEL SECURITY;
 
--- users: anyone can read; only the owner can update their own row; admin can do anything
+-- users: anyone can read; only the owner can update their own row
+DROP POLICY IF EXISTS "users_select_all" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+DROP POLICY IF EXISTS "users_insert_own" ON public.users;
 CREATE POLICY "users_select_all"    ON public.users FOR SELECT USING (true);
 CREATE POLICY "users_update_own"    ON public.users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "users_insert_own"    ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- projects: authenticated users can read; project manager or admin can write
+DROP POLICY IF EXISTS "projects_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_insert" ON public.projects;
+DROP POLICY IF EXISTS "projects_update" ON public.projects;
+DROP POLICY IF EXISTS "projects_delete" ON public.projects;
 CREATE POLICY "projects_select"     ON public.projects FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "projects_insert"     ON public.projects FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
@@ -153,6 +160,10 @@ CREATE POLICY "projects_delete"     ON public.projects FOR DELETE USING (
 );
 
 -- tasks: authenticated users can read; assignee or manager can update; admin can delete
+DROP POLICY IF EXISTS "tasks_select" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_update" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
 CREATE POLICY "tasks_select"        ON public.tasks FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "tasks_insert"        ON public.tasks FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "tasks_update"        ON public.tasks FOR UPDATE USING (
@@ -164,6 +175,9 @@ CREATE POLICY "tasks_delete"        ON public.tasks FOR DELETE USING (
 );
 
 -- attendance: users see their own; admin/pm see all
+DROP POLICY IF EXISTS "attendance_select" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_insert" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_update" ON public.attendance;
 CREATE POLICY "attendance_select"   ON public.attendance FOR SELECT USING (
   user_id = auth.uid() OR
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
@@ -175,6 +189,10 @@ CREATE POLICY "attendance_update"   ON public.attendance FOR UPDATE USING (
 );
 
 -- leaves: users manage their own; admin/pm approve
+DROP POLICY IF EXISTS "leaves_select" ON public.leaves;
+DROP POLICY IF EXISTS "leaves_insert" ON public.leaves;
+DROP POLICY IF EXISTS "leaves_update" ON public.leaves;
+DROP POLICY IF EXISTS "leaves_delete" ON public.leaves;
 CREATE POLICY "leaves_select"       ON public.leaves FOR SELECT USING (
   user_id = auth.uid() OR approved_by = auth.uid() OR
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
