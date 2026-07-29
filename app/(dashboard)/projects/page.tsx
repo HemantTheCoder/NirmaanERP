@@ -1,21 +1,57 @@
 import type { Metadata } from "next";
-import { FolderKanban } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { getProjects, getProjectManagers } from "@/lib/queries/projects";
+import { ProjectsView } from "@/components/projects/ProjectsView";
+import type { UserRole } from "@/types/database";
 
-export const metadata: Metadata = { title: "Projects" };
+export const metadata: Metadata = {
+  title: "Projects",
+  description: "Manage construction projects, milestone targets, and site assignments.",
+};
 
-export default function ProjectsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ProjectsPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Get user role
+  let userRole: UserRole = "site_staff";
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    const profile = profileData as { role: UserRole } | null;
+    if (profile?.role) {
+      userRole = profile.role;
+    }
+  }
+
+  // Fetch projects and project managers in parallel
+  const [projects, managers] = await Promise.all([
+    getProjects(supabase),
+    getProjectManagers(supabase),
+  ]);
+
   return (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-950/50 flex items-center justify-center">
-        <FolderKanban className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Projects</h2>
+        <p className="text-slate-500 text-sm mt-0.5">
+          Overview and management of all active construction sites and phases.
+        </p>
       </div>
-      <h2 className="text-xl font-semibold text-foreground">Projects</h2>
-      <p className="text-muted-foreground text-sm max-w-sm">
-        Full project CRUD — create, assign, track milestones — is coming in Phase 2.
-      </p>
-      <span className="text-xs font-medium px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
-        Coming soon
-      </span>
+
+      <ProjectsView
+        initialProjects={projects}
+        managers={managers}
+        userRole={userRole}
+      />
     </div>
   );
 }

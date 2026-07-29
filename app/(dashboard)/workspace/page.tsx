@@ -1,21 +1,53 @@
 import type { Metadata } from "next";
-import { Briefcase } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getMyTasks } from "@/lib/queries/tasks";
+import { getProjects } from "@/lib/queries/projects";
+import { KanbanBoard } from "@/components/workspace/KanbanBoard";
 
-export const metadata: Metadata = { title: "My Workspace" };
+export const metadata: Metadata = {
+  title: "My Workspace",
+  description: "Personal task board and work item management.",
+};
 
-export default function WorkspacePage() {
+export const dynamic = "force-dynamic";
+
+export default async function WorkspacePage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch my tasks & all projects for dropdown
+  const [tasks, projects] = await Promise.all([
+    getMyTasks(supabase, user.id),
+    getProjects(supabase),
+  ]);
+
+  const projectOptions = projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+  }));
+
   return (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-950/50 flex items-center justify-center">
-        <Briefcase className="w-7 h-7 text-violet-600 dark:text-violet-400" />
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">My Workspace</h2>
+        <p className="text-slate-500 text-sm mt-0.5">
+          Your personal task board. Drag and drop work items to update progress.
+        </p>
       </div>
-      <h2 className="text-xl font-semibold text-foreground">My Workspace</h2>
-      <p className="text-muted-foreground text-sm max-w-sm">
-        Personal task board, time logs, and leave management are coming in Phase 2.
-      </p>
-      <span className="text-xs font-medium px-3 py-1 rounded-full bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-900">
-        Coming soon
-      </span>
+
+      <KanbanBoard
+        initialTasks={tasks}
+        projects={projectOptions}
+        userId={user.id}
+      />
     </div>
   );
 }
