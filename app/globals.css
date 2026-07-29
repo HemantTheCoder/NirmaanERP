@@ -2,34 +2,35 @@
 
 /* ─── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  /* Background / surface */
-  --background:        0 0% 100%;
-  --foreground:        224 71% 4%;
+  /* Background / surface — slight blue-gray tint so white cards pop */
+  --background:        220 20% 97%;
+  --foreground:        224 71% 6%;
 
   --card:              0 0% 100%;
-  --card-foreground:   224 71% 4%;
+  --card-foreground:   224 71% 6%;
 
   --popover:           0 0% 100%;
-  --popover-foreground:224 71% 4%;
+  --popover-foreground:224 71% 6%;
 
   /* Brand — indigo-600 accent */
   --primary:           243 75% 59%;
   --primary-foreground:210 40% 98%;
 
-  --secondary:         220 14% 96%;
-  --secondary-foreground:220 9% 46%;
+  --secondary:         220 14% 94%;
+  --secondary-foreground:220 13% 28%;
 
-  --muted:             220 14% 96%;
-  --muted-foreground:  220 9% 46%;
+  /* muted-foreground bumped from 46% → 38% lightness for much better contrast */
+  --muted:             220 14% 94%;
+  --muted-foreground:  220 13% 38%;
 
-  --accent:            220 14% 96%;
-  --accent-foreground: 220 9% 46%;
+  --accent:            220 14% 94%;
+  --accent-foreground: 220 13% 28%;
 
   --destructive:       0 84% 60%;
   --destructive-foreground: 210 40% 98%;
 
-  --border:            220 13% 91%;
-  --input:             220 13% 91%;
+  --border:            220 13% 88%;
+  --input:             220 13% 88%;
   --ring:              243 75% 59%;
 
   --radius: 0.5rem;

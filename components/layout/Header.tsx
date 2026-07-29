@@ -38,7 +38,7 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
   });
 
   return (
-    <header className="h-16 flex items-center gap-4 px-6 bg-white dark:bg-slate-900 border-b border-border shrink-0">
+    <header className="h-16 flex items-center gap-4 px-6 bg-white border-b border-slate-200 shrink-0 shadow-sm">
       {/* Mobile menu toggle */}
       <button
         id="mobile-menu-toggle"

@@ -59,7 +59,7 @@ export default function DashboardPage() {
       {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground">Good morning 👋</h2>
-        <p className="text-muted-foreground text-sm mt-0.5">
+        <p className="text-slate-500 text-sm mt-0.5">
           Here&apos;s what&apos;s happening across your projects today.
         </p>
       </div>
