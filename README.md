@@ -1,36 +1,144 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nirmaan ERP
 
-## Getting Started
+A modern construction management ERP built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Supabase**.
 
-First, run the development server:
+---
+
+## Tech Stack
+
+| Layer       | Technology                          |
+|-------------|-------------------------------------|
+| Framework   | Next.js 16 (App Router)             |
+| Language    | TypeScript 5                        |
+| Styling     | Tailwind CSS v4                     |
+| Auth / DB   | Supabase (Postgres + Auth + Storage)|
+| Icons       | Lucide React                        |
+| Deploy      | Vercel                              |
+
+---
+
+## Project Structure
+
+```
+├── app/
+│   ├── (auth)/           # Login & signup pages (no sidebar)
+│   │   ├── login/
+│   │   └── signup/
+│   ├── (dashboard)/      # Authenticated shell — sidebar + header
+│   │   ├── layout.tsx    # Validates session, fetches profile
+│   │   ├── dashboard/    # Dashboard with KPIs, progress, meetings
+│   │   ├── projects/     # Phase 2: project CRUD
+│   │   ├── workspace/    # Phase 2: personal task board
+│   │   ├── schedule/     # Phase 2: Gantt / calendar
+│   │   ├── reports/      # Phase 2: analytics
+│   │   └── admin/        # Admin-only settings
+│   ├── layout.tsx        # Root HTML shell, fonts, global CSS
+│   └── page.tsx          # Redirects "/" → "/dashboard"
+├── components/
+│   ├── auth/             # LoginForm, SignupForm
+│   ├── dashboard/        # KpiCard, ProjectProgressList, UpcomingMeetings
+│   └── layout/           # AppShell, Sidebar, Header
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts     # Browser client
+│   │   └── server.ts     # Server component client
+│   └── utils.ts          # cn() utility
+├── types/
+│   └── database.ts       # TypeScript types matching the DB schema
+├── supabase/
+│   └── migrations/
+│       └── 0001_initial_schema.sql
+├── middleware.ts          # Session refresh + route protection
+├── .env.example
+└── .env.local            # ← fill this in (never commit)
+```
+
+---
+
+## Setup
+
+### 1. Clone & install
+
+```bash
+git clone https://github.com/your-org/nirmaan-erp.git
+cd nirmaan-erp
+npm install
+```
+
+### 2. Create a Supabase project
+
+1. Go to [supabase.com](https://supabase.com) → **New project**
+2. Copy your **Project URL** and **anon public key** from  
+   `Project Settings → API`
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 4. Apply the database schema
+
+Open the Supabase **SQL Editor** and paste the contents of  
+`supabase/migrations/0001_initial_schema.sql`, then run it.
+
+> This creates all tables, enums, RLS policies, and a trigger that  
+> auto-creates a `public.users` profile row on every new signup.
+
+### 5. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## User Roles
 
-## Learn More
+| Role              | Description                         |
+|-------------------|-------------------------------------|
+| `admin`           | Full access — promoted manually in Supabase table editor |
+| `project_manager` | Create/manage projects and tasks    |
+| `site_staff`      | View tasks, log attendance          |
+| `client`          | Read-only project visibility        |
 
-To learn more about Next.js, take a look at the following resources:
+> **Security note:** The signup form intentionally omits `admin` from the  
+> role dropdown. To promote yourself to admin, run this in the SQL editor:  
+> `UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploying to Vercel
 
-## Deploy on Vercel
+1. Push this repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repo
+3. In **Environment Variables**, add:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Click **Deploy**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The build should succeed with zero configuration — no custom build command needed.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Roadmap
+
+- **Phase 1 (current):** Foundation + navigation shell + dashboard
+- **Phase 2:** Project CRUD, My Workspace task board, Supabase real-time
+- **Phase 3:** Schedule / Gantt, Reports / analytics
+- **Phase 4:** Admin panel, role management
+
+---
+
+## License
+
+MIT © Nirmaan ERP

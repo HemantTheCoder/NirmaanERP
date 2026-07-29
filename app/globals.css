@@ -1,26 +1,141 @@
 @import "tailwindcss";
 
+/* ─── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background / surface */
+  --background:        0 0% 100%;
+  --foreground:        224 71% 4%;
+
+  --card:              0 0% 100%;
+  --card-foreground:   224 71% 4%;
+
+  --popover:           0 0% 100%;
+  --popover-foreground:224 71% 4%;
+
+  /* Brand — indigo-600 accent */
+  --primary:           243 75% 59%;
+  --primary-foreground:210 40% 98%;
+
+  --secondary:         220 14% 96%;
+  --secondary-foreground:220 9% 46%;
+
+  --muted:             220 14% 96%;
+  --muted-foreground:  220 9% 46%;
+
+  --accent:            220 14% 96%;
+  --accent-foreground: 220 9% 46%;
+
+  --destructive:       0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border:            220 13% 91%;
+  --input:             220 13% 91%;
+  --ring:              243 75% 59%;
+
+  --radius: 0.5rem;
+
+  /* Sidebar */
+  --sidebar-bg:        222 47% 11%;
+  --sidebar-fg:        213 31% 91%;
+  --sidebar-muted:     215 20% 65%;
+  --sidebar-border:    215 28% 17%;
+  --sidebar-accent:    243 75% 59%;
+  --sidebar-width:     240px;
+  --sidebar-collapsed: 64px;
 }
 
+.dark {
+  --background:        222 47% 11%;
+  --foreground:        213 31% 91%;
+
+  --card:              223 47% 14%;
+  --card-foreground:   213 31% 91%;
+
+  --popover:           223 47% 14%;
+  --popover-foreground:213 31% 91%;
+
+  --primary:           243 75% 65%;
+  --primary-foreground:210 40% 98%;
+
+  --secondary:         217 33% 17%;
+  --secondary-foreground:213 31% 91%;
+
+  --muted:             217 33% 17%;
+  --muted-foreground:  215 20% 65%;
+
+  --accent:            217 33% 17%;
+  --accent-foreground: 213 31% 91%;
+
+  --destructive:       0 62% 30%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border:            217 33% 17%;
+  --input:             217 33% 17%;
+  --ring:              243 75% 65%;
+}
+
+/* ─── Tailwind v4 theme bridge ─────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:        hsl(var(--background));
+  --color-foreground:        hsl(var(--foreground));
+  --color-card:              hsl(var(--card));
+  --color-card-foreground:   hsl(var(--card-foreground));
+  --color-primary:           hsl(var(--primary));
+  --color-primary-foreground:hsl(var(--primary-foreground));
+  --color-secondary:         hsl(var(--secondary));
+  --color-secondary-foreground:hsl(var(--secondary-foreground));
+  --color-muted:             hsl(var(--muted));
+  --color-muted-foreground:  hsl(var(--muted-foreground));
+  --color-accent:            hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive:       hsl(var(--destructive));
+  --color-border:            hsl(var(--border));
+  --color-input:             hsl(var(--input));
+  --color-ring:              hsl(var(--ring));
+  --color-sidebar-bg:        hsl(var(--sidebar-bg));
+  --color-sidebar-fg:        hsl(var(--sidebar-fg));
+  --color-sidebar-muted:     hsl(var(--sidebar-muted));
+  --color-sidebar-border:    hsl(var(--sidebar-border));
+  --color-sidebar-accent:    hsl(var(--sidebar-accent));
+  --radius-sm:    calc(var(--radius) - 4px);
+  --radius-md:    var(--radius);
+  --radius-lg:    calc(var(--radius) + 4px);
+  --font-sans:    var(--font-geist-sans);
+  --font-mono:    var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base resets ───────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Sidebar animation ─────────────────────────────────────────────────────── */
+.sidebar-transition {
+  transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
