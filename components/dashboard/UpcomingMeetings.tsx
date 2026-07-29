@@ -38,17 +38,29 @@ const MEETINGS: Meeting[] = [
 ];
 
 const typeConfig = {
-  virtual:  { icon: Video,  label: "Virtual",  color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950/50" },
-  on_site:  { icon: MapPin, label: "On-site",  color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50" },
-  office:   { icon: Users,  label: "Office",   color: "text-amber-500 bg-amber-50 dark:bg-amber-950/50" },
+  virtual: {
+    icon: Video,
+    label: "Virtual",
+    color: "bg-indigo-100 text-indigo-900 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800",
+  },
+  on_site: {
+    icon: MapPin,
+    label: "On-site",
+    color: "bg-emerald-100 text-emerald-900 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+  },
+  office: {
+    icon: Users,
+    label: "Office",
+    color: "bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
+  },
 };
 
 const avatarColors = [
-  "bg-indigo-500",
-  "bg-violet-500",
-  "bg-emerald-500",
-  "bg-rose-500",
-  "bg-amber-500",
+  "bg-indigo-600 text-white",
+  "bg-violet-600 text-white",
+  "bg-emerald-600 text-white",
+  "bg-rose-600 text-white",
+  "bg-amber-600 text-white",
 ];
 
 export function UpcomingMeetings() {
@@ -56,7 +68,7 @@ export function UpcomingMeetings() {
     <div className="bg-card border border-border rounded-xl p-5 h-full">
       <div className="flex items-center justify-between mb-5">
         <h3 className="font-semibold text-foreground text-base">Upcoming Meetings</h3>
-        <span className="text-xs text-muted-foreground">{MEETINGS.length} scheduled</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{MEETINGS.length} scheduled</span>
       </div>
 
       <div className="space-y-4">
@@ -68,17 +80,17 @@ export function UpcomingMeetings() {
             <div
               key={meeting.id}
               id={`meeting-${meeting.id}`}
-              className="flex gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-default"
+              className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-default"
             >
               {/* Time column */}
               <div className="shrink-0 text-right w-16">
-                <p className="text-xs font-semibold text-foreground">{meeting.time}</p>
-                <p className="text-xs text-muted-foreground">{meeting.date}</p>
+                <p className="text-xs font-bold text-foreground">{meeting.time}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{meeting.date}</p>
               </div>
 
               {/* Divider */}
               <div className="flex flex-col items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-indigo-600 mt-1 shrink-0" />
                 {mi < MEETINGS.length - 1 && (
                   <div className="w-px flex-1 bg-border" />
                 )}
@@ -86,9 +98,9 @@ export function UpcomingMeetings() {
 
               {/* Details */}
               <div className="flex-1 min-w-0 pb-1">
-                <p className="text-sm font-medium text-foreground leading-tight">{meeting.title}</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">{meeting.title}</p>
 
-                <div className={cn("inline-flex items-center gap-1 mt-1.5 text-xs px-1.5 py-0.5 rounded font-medium", config.color)}>
+                <div className={cn("inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-md font-semibold", config.color)}>
                   <TypeIcon className="w-3 h-3" />
                   {config.label}
                 </div>
@@ -99,7 +111,7 @@ export function UpcomingMeetings() {
                     <div
                       key={i}
                       className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold -ml-1 first:ml-0 border border-card",
+                        "w-5.5 h-5.5 rounded-full flex items-center justify-center text-[9px] font-bold -ml-1 first:ml-0 border border-card shadow-2xs",
                         avatarColors[i % avatarColors.length]
                       )}
                       title={initials}
@@ -108,7 +120,7 @@ export function UpcomingMeetings() {
                     </div>
                   ))}
                   {meeting.attendees.length > 4 && (
-                    <span className="text-xs text-muted-foreground ml-1">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-medium">
                       +{meeting.attendees.length - 4}
                     </span>
                   )}

@@ -1,36 +1,47 @@
-import { TrendingUp, TrendingDown, Minus, type LucideIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, CheckCircle2, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Color = "indigo" | "emerald" | "violet" | "amber";
-type Trend = "up" | "down" | "neutral";
+type MetricColor = "indigo" | "emerald" | "violet" | "amber";
+type TrendState = "up" | "down" | "neutral";
 
-const colorMap: Record<Color, { bg: string; icon: string; ring: string }> = {
+const colorMap: Record<MetricColor, { iconBg: string; iconText: string }> = {
   indigo: {
-    bg:   "bg-indigo-50 dark:bg-indigo-950/40",
-    icon: "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400",
-    ring: "ring-indigo-100 dark:ring-indigo-900/40",
+    iconBg:   "bg-indigo-100 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800",
+    iconText: "text-indigo-700 dark:text-indigo-300",
   },
   emerald: {
-    bg:   "bg-emerald-50 dark:bg-emerald-950/40",
-    icon: "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400",
-    ring: "ring-emerald-100 dark:ring-emerald-900/40",
+    iconBg:   "bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800",
+    iconText: "text-emerald-700 dark:text-emerald-300",
   },
   violet: {
-    bg:   "bg-violet-50 dark:bg-violet-950/40",
-    icon: "bg-violet-100 dark:bg-violet-900/60 text-violet-600 dark:text-violet-400",
-    ring: "ring-violet-100 dark:ring-violet-900/40",
+    iconBg:   "bg-violet-100 dark:bg-violet-950/80 border border-violet-200 dark:border-violet-800",
+    iconText: "text-violet-700 dark:text-violet-300",
   },
   amber: {
-    bg:   "bg-amber-50 dark:bg-amber-950/40",
-    icon: "bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400",
-    ring: "ring-amber-100 dark:ring-amber-900/40",
+    iconBg:   "bg-amber-100 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800",
+    iconText: "text-amber-700 dark:text-amber-300",
   },
 };
 
-const trendMap: Record<Trend, { icon: LucideIcon; color: string; label: string }> = {
-  up:      { icon: TrendingUp,   color: "text-emerald-500", label: "Trending up" },
-  down:    { icon: TrendingDown, color: "text-rose-500",    label: "Trending down" },
-  neutral: { icon: Minus,        color: "text-amber-500",   label: "No change" },
+const trendMap: Record<TrendState, { icon: LucideIcon; badgeBg: string; text: string; label: string }> = {
+  up: {
+    icon: TrendingUp,
+    badgeBg: "bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800",
+    text: "text-emerald-700 dark:text-emerald-300",
+    label: "Positive",
+  },
+  down: {
+    icon: TrendingDown,
+    badgeBg: "bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800",
+    text: "text-rose-700 dark:text-rose-300",
+    label: "Negative",
+  },
+  neutral: {
+    icon: CheckCircle2,
+    badgeBg: "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700",
+    text: "text-slate-700 dark:text-slate-300",
+    label: "Normal",
+  },
 };
 
 interface KpiCardProps {
@@ -38,9 +49,9 @@ interface KpiCardProps {
   label: string;
   value: string;
   change: string;
-  trend: Trend;
+  trend: TrendState;
   icon: LucideIcon;
-  color: Color;
+  color: MetricColor;
 }
 
 export function KpiCard({ id, label, value, change, trend, icon: Icon, color }: KpiCardProps) {
@@ -52,23 +63,33 @@ export function KpiCard({ id, label, value, change, trend, icon: Icon, color }: 
     <div
       id={id}
       className={cn(
-        "rounded-xl p-5 border border-border bg-card",
-        "hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+        "rounded-xl p-5 border border-border bg-card shadow-2xs",
+        "hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between"
       )}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", colors.icon)}>
-          <Icon className="w-5 h-5" />
+      {/* Top Header: Icon + Trend Pill */}
+      <div className="flex items-center justify-between mb-3">
+        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", colors.iconBg)}>
+          <Icon className={cn("w-4.5 h-4.5", colors.iconText)} />
         </div>
-        <div className={cn("flex items-center gap-1 text-xs font-medium", trendInfo.color)}>
-          <TrendIcon className="w-3.5 h-3.5" aria-label={trendInfo.label} />
+
+        <div className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full", trendInfo.badgeBg, trendInfo.text)}>
+          <TrendIcon className="w-3 h-3 shrink-0" aria-label={trendInfo.label} />
+          <span>{trendInfo.label}</span>
         </div>
       </div>
 
+      {/* Main Content: Number -> Label -> Subtext */}
       <div>
-        <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
-        <p className="text-sm font-medium text-muted-foreground mt-0.5">{label}</p>
-        <p className="text-xs text-muted-foreground/70 mt-2">{change}</p>
+        <p className="text-3xl font-bold text-foreground tracking-tight leading-none">
+          {value}
+        </p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1.5 leading-tight">
+          {label}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-border/50">
+          {change}
+        </p>
       </div>
     </div>
   );

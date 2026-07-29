@@ -13,12 +13,32 @@ interface TaskCardProps {
 
 const priorityBadge: Record<
   string,
-  { label: string; bg: string; text: string }
+  { label: string; bg: string; text: string; border: string }
 > = {
-  low: { label: "Low", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-400" },
-  medium: { label: "Medium", bg: "bg-blue-50 dark:bg-blue-950/50", text: "text-blue-600 dark:text-blue-400" },
-  high: { label: "High", bg: "bg-amber-50 dark:bg-amber-950/50", text: "text-amber-600 dark:text-amber-400" },
-  urgent: { label: "Urgent", bg: "bg-rose-50 dark:bg-rose-950/50", text: "text-rose-600 dark:text-rose-400" },
+  low: {
+    label: "Low",
+    bg: "bg-slate-100 dark:bg-slate-800",
+    text: "text-slate-800 dark:text-slate-200",
+    border: "border-slate-200 dark:border-slate-700",
+  },
+  medium: {
+    label: "Medium",
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-900 dark:text-blue-300",
+    border: "border-blue-200 dark:border-blue-800",
+  },
+  high: {
+    label: "High",
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-900 dark:text-amber-300",
+    border: "border-amber-200 dark:border-amber-800",
+  },
+  urgent: {
+    label: "Urgent",
+    bg: "bg-rose-100 dark:bg-rose-950",
+    text: "text-rose-900 dark:text-rose-300",
+    border: "border-rose-200 dark:border-rose-800",
+  },
 };
 
 export function TaskCard({ task, onMarkDone }: TaskCardProps) {
@@ -60,9 +80,10 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
 
         <span
           className={cn(
-            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+            "px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider",
             priorityInfo.bg,
-            priorityInfo.text
+            priorityInfo.text,
+            priorityInfo.border
           )}
         >
           {priorityInfo.label}
@@ -76,7 +97,7 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
 
       {/* Description if present */}
       {task.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
           {task.description}
         </p>
       )}
@@ -85,18 +106,18 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
       <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
         {/* Project Name Chip */}
         {task.project_name ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md truncate max-w-[130px]">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-900 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md truncate max-w-[130px]">
             <Tag className="w-3 h-3 shrink-0" />
             <span className="truncate">{task.project_name}</span>
           </span>
         ) : (
-          <span className="text-[11px] text-muted-foreground">General</span>
+          <span className="text-[11px] text-slate-500 font-medium">General</span>
         )}
 
         {/* Due Date or Mark Done */}
         <div className="flex items-center gap-2">
           {task.due_date && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               <Clock className="w-3 h-3" />
               {task.due_date}
             </span>
@@ -107,7 +128,7 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
               type="button"
               onClick={() => onMarkDone(task.id)}
               title="Quick mark as done"
-              className="p-1 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+              className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>
