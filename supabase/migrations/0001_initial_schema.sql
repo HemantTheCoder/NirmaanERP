@@ -4,21 +4,42 @@
 --   supabase db push
 -- =============================================================================
 
--- ── Enums ─────────────────────────────────────────────────────────────────────
+-- ── Enums (idempotent — safe to re-run) ──────────────────────────────────────
 
-CREATE TYPE user_role AS ENUM ('admin', 'project_manager', 'site_staff', 'client');
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('admin', 'project_manager', 'site_staff', 'client');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE project_status AS ENUM ('planning', 'active', 'on_hold', 'completed');
+DO $$ BEGIN
+  CREATE TYPE project_status AS ENUM ('planning', 'active', 'on_hold', 'completed');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'review', 'done');
+DO $$ BEGIN
+  CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'review', 'done');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+DO $$ BEGIN
+  CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'half_day', 'on_leave');
+DO $$ BEGIN
+  CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'half_day', 'on_leave');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE leave_type AS ENUM ('casual', 'sick', 'earned', 'unpaid');
+DO $$ BEGIN
+  CREATE TYPE leave_type AS ENUM ('casual', 'sick', 'earned', 'unpaid');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
+DO $$ BEGIN
+  CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Users ─────────────────────────────────────────────────────────────────────
 -- Mirrors auth.users — stores role and profile data
