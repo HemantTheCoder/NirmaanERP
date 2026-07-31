@@ -1,4 +1,12 @@
 export type UserRole = "admin" | "project_manager" | "site_staff" | "client";
+export type LocationType = "on_site" | "virtual";
+export type MeetingStatus = "scheduled" | "completed" | "cancelled";
+export type RsvpStatus = "pending" | "accepted" | "declined";
+export type NotificationType =
+  | "task_assigned"
+  | "meeting_invite"
+  | "status_change"
+  | "approval_needed";
 
 export type Json =
   | string
@@ -168,11 +176,122 @@ export interface Database {
           created_at?: string;
         };
       };
+      meetings: {
+        Row: {
+          id: string;
+          title: string;
+          project_id: string | null;
+          organizer_id: string;
+          start_time: string;
+          end_time: string;
+          location_type: LocationType;
+          location_detail: string | null;
+          status: MeetingStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          project_id?: string | null;
+          organizer_id: string;
+          start_time: string;
+          end_time: string;
+          location_type?: LocationType;
+          location_detail?: string | null;
+          status?: MeetingStatus;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          project_id?: string | null;
+          organizer_id?: string;
+          start_time?: string;
+          end_time?: string;
+          location_type?: LocationType;
+          location_detail?: string | null;
+          status?: MeetingStatus;
+          created_at?: string;
+        };
+      };
+      meeting_attendees: {
+        Row: {
+          meeting_id: string;
+          user_id: string;
+          rsvp_status: RsvpStatus;
+        };
+        Insert: {
+          meeting_id: string;
+          user_id: string;
+          rsvp_status?: RsvpStatus;
+        };
+        Update: {
+          meeting_id?: string;
+          user_id?: string;
+          rsvp_status?: RsvpStatus;
+        };
+      };
+      meeting_minutes: {
+        Row: {
+          id: string;
+          meeting_id: string;
+          content: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          meeting_id: string;
+          content: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          meeting_id?: string;
+          content?: string;
+          created_by?: string;
+          created_at?: string;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: NotificationType;
+          message: string;
+          link: string;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: NotificationType;
+          message: string;
+          link?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: NotificationType;
+          message?: string;
+          link?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: {
       user_role: UserRole;
+      location_type: LocationType;
+      meeting_status: MeetingStatus;
+      rsvp_status: RsvpStatus;
+      notification_type: NotificationType;
     };
   };
 }

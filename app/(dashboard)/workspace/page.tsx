@@ -38,8 +38,8 @@ export default async function WorkspacePage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h2 className="text-2xl font-bold text-foreground">My Workspace</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Your personal task board. Drag and drop work items to update progress.
+        <p className="text-muted-foreground text-sm mt-0.5">
+          Drag and drop tasks across columns to update status in real time.
         </p>
       </div>
 

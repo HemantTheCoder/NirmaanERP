@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectsWithProgress } from "@/lib/queries/projects";
+import { getUpcomingMeetings } from "@/lib/queries/meetings";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ProjectProgressList } from "@/components/dashboard/ProjectProgressList";
 import { UpcomingMeetings } from "@/components/dashboard/UpcomingMeetings";
@@ -21,13 +22,14 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  // Run 4 parallel count queries + 1 project progress query
+  // Run 5 parallel queries: 4 count queries + project progress + upcoming meetings
   const [
     { count: activeProjectsCount },
     { count: openTasksCount },
     { count: teamMembersCount },
     { count: pendingLeavesCount },
     projectsProgress,
+    upcomingMeetings,
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -43,6 +45,7 @@ export default async function DashboardPage() {
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
     getProjectsWithProgress(supabase),
+    getUpcomingMeetings(supabase, 3),
   ]);
 
   const activeProjects = activeProjectsCount ?? 0;
@@ -94,7 +97,7 @@ export default async function DashboardPage() {
       {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground">Good morning 👋</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
+        <p className="text-muted-foreground text-sm mt-0.5">
           Here&apos;s what&apos;s happening across your projects today.
         </p>
       </div>
@@ -114,7 +117,7 @@ export default async function DashboardPage() {
           <ProjectProgressList projects={projectsProgress} />
         </div>
         <div>
-          <UpcomingMeetings />
+          <UpcomingMeetings meetings={upcomingMeetings} />
         </div>
       </div>
     </div>

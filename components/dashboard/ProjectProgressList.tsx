@@ -8,7 +8,7 @@ interface ProjectProgressListProps {
 }
 
 const statusConfig = {
-  planning:  { label: "Planning",   dot: "bg-slate-400", text: "text-slate-600 dark:text-slate-400" },
+  planning:  { label: "Planning",   dot: "bg-slate-400", text: "text-muted-foreground" },
   active:    { label: "Active",     dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" },
   on_hold:   { label: "On Hold",    dot: "bg-amber-500",   text: "text-amber-600 dark:text-amber-400" },
   completed: { label: "Completed",  dot: "bg-indigo-500",  text: "text-indigo-600 dark:text-indigo-400" },

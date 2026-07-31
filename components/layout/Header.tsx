@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, Menu, Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
+import { NotificationBell } from "./NotificationBell";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -19,10 +20,11 @@ interface HeaderProps {
     full_name: string;
     role: UserRole;
   };
+  userId: string;
   onMenuToggle: () => void;
 }
 
-export function Header({ user, onMenuToggle }: HeaderProps) {
+export function Header({ user, userId, onMenuToggle }: HeaderProps) {
   const pathname = usePathname();
 
   const title =
@@ -67,15 +69,7 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
       </div>
 
       {/* Notifications */}
-      <button
-        id="notifications-btn"
-        className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
-        aria-label="Notifications"
-      >
-        <Bell className="w-4.5 h-4.5 text-muted-foreground" />
-        {/* Badge */}
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
-      </button>
+      <NotificationBell userId={userId} />
 
       {/* User initials chip */}
       <div

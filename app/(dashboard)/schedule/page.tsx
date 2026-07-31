@@ -1,21 +1,66 @@
 import type { Metadata } from "next";
-import { CalendarDays } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getMeetings } from "@/lib/queries/meetings";
+import { getProjects } from "@/lib/queries/projects";
+import { CalendarView } from "@/components/schedule/CalendarView";
+import type { UserRole } from "@/types/database";
 
-export const metadata: Metadata = { title: "Schedule" };
+export const metadata: Metadata = {
+  title: "Schedule",
+  description: "Manage meetings, site visits, and team calendar.",
+};
 
-export default function SchedulePage() {
+export const dynamic = "force-dynamic";
+
+export default async function SchedulePage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch all data in parallel: meetings (RLS-filtered), projects, users, and the
+  // current user's role — all needed to render the calendar and its modals.
+  const [meetings, projects, usersResult, profileResult] = await Promise.all([
+    getMeetings(supabase),
+    getProjects(supabase),
+    supabase
+      .from("users")
+      .select("id, full_name, email")
+      .order("full_name", { ascending: true }),
+    supabase.from("users").select("role").eq("id", user.id).single(),
+  ]);
+
+  const allUsers = (usersResult.data || []) as {
+    id: string;
+    full_name: string | null;
+    email: string;
+  }[];
+
+  const userRole: UserRole =
+    ((profileResult.data as any)?.role as UserRole) ?? "site_staff";
+
   return (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center">
-        <CalendarDays className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Schedule</h2>
+        <p className="text-muted-foreground text-sm mt-0.5">
+          Manage meetings, site visits, and team calendar.
+        </p>
       </div>
-      <h2 className="text-xl font-semibold text-foreground">Schedule</h2>
-      <p className="text-muted-foreground text-sm max-w-sm">
-        Gantt charts, milestone tracking, and site visit scheduling are coming in Phase 2.
-      </p>
-      <span className="text-xs font-medium px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900">
-        Coming soon
-      </span>
+
+      <CalendarView
+        initialMeetings={meetings}
+        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        users={allUsers}
+        currentUserId={user.id}
+        currentUserRole={userRole}
+      />
     </div>
   );
 }

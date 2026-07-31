@@ -42,8 +42,8 @@ export default async function ProjectsPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h2 className="text-2xl font-bold text-foreground">Projects</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Overview and management of all active construction sites and phases.
+        <p className="text-muted-foreground text-sm mt-0.5">
+          Manage and track all construction sites and developments.
         </p>
       </div>
 

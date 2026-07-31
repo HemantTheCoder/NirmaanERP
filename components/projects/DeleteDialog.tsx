@@ -51,7 +51,7 @@ export function DeleteDialog({
             type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Delete Project

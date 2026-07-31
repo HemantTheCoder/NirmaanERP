@@ -97,7 +97,7 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
 
       {/* Description if present */}
       {task.description && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
           {task.description}
         </p>
       )}
@@ -111,13 +111,13 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
             <span className="truncate">{task.project_name}</span>
           </span>
         ) : (
-          <span className="text-[11px] text-slate-500 font-medium">General</span>
+          <span className="text-[11px] text-muted-foreground font-medium">General</span>
         )}
 
         {/* Due Date or Mark Done */}
         <div className="flex items-center gap-2">
           {task.due_date && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
               <Clock className="w-3 h-3" />
               {task.due_date}
             </span>
@@ -128,7 +128,7 @@ export function TaskCard({ task, onMarkDone }: TaskCardProps) {
               type="button"
               onClick={() => onMarkDone(task.id)}
               title="Quick mark as done"
-              className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+              className="p-1 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>

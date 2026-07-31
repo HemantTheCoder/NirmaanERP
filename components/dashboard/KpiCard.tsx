@@ -84,10 +84,10 @@ export function KpiCard({ id, label, value, change, trend, icon: Icon, color }: 
         <p className="text-3xl font-bold text-foreground tracking-tight leading-none">
           {value}
         </p>
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1.5 leading-tight">
+        <p className="text-xs font-semibold text-foreground/90 mt-1.5 leading-tight">
           {label}
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-border/50">
+        <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/50">
           {change}
         </p>
       </div>

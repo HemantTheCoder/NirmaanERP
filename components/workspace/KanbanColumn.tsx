@@ -58,7 +58,7 @@ export function KanbanColumn({
           ))}
 
           {tasks.length === 0 && (
-            <div className="h-32 border border-dashed border-border rounded-lg flex items-center justify-center text-xs text-muted-foreground/60">
+            <div className="h-32 border border-dashed border-border rounded-lg flex items-center justify-center text-xs text-muted-foreground">
               No tasks
             </div>
           )}

@@ -63,7 +63,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
               <h2 className="text-2xl font-bold text-foreground">{project.name}</h2>
               <StatusBadge status={project.status} />
             </div>
-            <p className="text-slate-500 text-sm max-w-2xl">
+            <p className="text-muted-foreground text-sm max-w-2xl">
               {project.description || "No description provided."}
             </p>
           </div>
