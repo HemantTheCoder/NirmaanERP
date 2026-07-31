@@ -7,6 +7,8 @@ import { ProjectProgressList } from "@/components/dashboard/ProjectProgressList"
 import { UpcomingMeetings } from "@/components/dashboard/UpcomingMeetings";
 import Link from "next/link";
 import { getInUseResourceCount } from "@/lib/queries/resources";
+import { getClientProjects, getClientDocuments } from "@/lib/queries/client";
+import { ClientPortalView } from "@/components/client/ClientPortalView";
 import type { UserRole } from "@/types/database";
 import {
   FolderKanban,
@@ -32,10 +34,35 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   const { data: profileData } = user
-    ? await (supabase.from("users") as any).select("role").eq("id", user.id).single()
+    ? await (supabase.from("users") as any).select("full_name, role").eq("id", user.id).single()
     : { data: null };
 
-  const profile = profileData as { role: UserRole } | null;
+  const profile = profileData as { full_name: string | null; role: UserRole } | null;
+
+  // ── CLIENT ROLE ROUTING ──────────────────────────────────────────────────────
+  if (profile?.role === "client" && user) {
+    const clientProjects = await getClientProjects(supabase, user.id);
+    const activeProject = clientProjects[0];
+
+    const [clientDocs, upcomingMeetings] = await Promise.all([
+      activeProject ? getClientDocuments(supabase, activeProject.id) : Promise.resolve([]),
+      getUpcomingMeetings(supabase, 5),
+    ]);
+
+    return (
+      <ClientPortalView
+        user={{
+          id: user.id,
+          email: user.email || "",
+          full_name: profile.full_name,
+        }}
+        projects={clientProjects}
+        initialDocuments={clientDocs}
+        meetings={upcomingMeetings}
+      />
+    );
+  }
+
   const canViewReports = profile?.role === "admin" || profile?.role === "project_manager";
 
   // Run 6 parallel queries: 5 count queries + project progress + upcoming meetings

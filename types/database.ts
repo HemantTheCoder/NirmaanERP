@@ -60,6 +60,9 @@ export interface Database {
           start_date: string | null;
           end_date: string | null;
           manager_id: string | null;
+          client_id: string | null;
+          client_approved: boolean;
+          client_approved_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -70,6 +73,9 @@ export interface Database {
           start_date?: string | null;
           end_date?: string | null;
           manager_id?: string | null;
+          client_id?: string | null;
+          client_approved?: boolean;
+          client_approved_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -80,6 +86,9 @@ export interface Database {
           start_date?: string | null;
           end_date?: string | null;
           manager_id?: string | null;
+          client_id?: string | null;
+          client_approved?: boolean;
+          client_approved_at?: string | null;
           created_at?: string;
         };
       };

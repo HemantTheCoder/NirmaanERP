@@ -68,9 +68,16 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => !item.allowedRoles || item.allowedRoles.includes(user.role)
-  );
+  const CLIENT_NAV_ITEMS: NavItem[] = [
+    { label: "Client Portal",   href: "/dashboard",   icon: LayoutDashboard },
+    { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
+  ];
+
+  const visibleNav = user.role === "client"
+    ? CLIENT_NAV_ITEMS
+    : NAV_ITEMS.filter(
+        (item) => !item.allowedRoles || item.allowedRoles.includes(user.role)
+      );
 
   async function handleLogout() {
     await supabase.auth.signOut();
