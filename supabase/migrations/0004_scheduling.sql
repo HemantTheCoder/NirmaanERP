@@ -290,16 +290,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.notifications (user_id, type, message, link)
-  SELECT
-    NEW.user_id,
-    'meeting_invite'::notification_type,
-    format('You have been invited to: %s', COALESCE(m.title, 'a meeting')),
-    '/schedule'
-  FROM public.meetings m
-  WHERE m.id = NEW.meeting_id
-    AND NEW.user_id IS DISTINCT FROM m.organizer_id;
-
+  INSERT INTO public.notifications (user_id, type, message, link) SELECT NEW.user_id, 'meeting_invite'::notification_type, 'You have been invited to a meeting', '/schedule' FROM public.meetings m WHERE m.id = NEW.meeting_id AND NEW.user_id IS DISTINCT FROM m.organizer_id;
   RETURN NEW;
 END;
 $$;
