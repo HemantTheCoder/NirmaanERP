@@ -228,11 +228,7 @@ CREATE POLICY "notifications_insert" ON public.notifications FOR INSERT WITH CHE
 -- BEFORE UPDATE trigger: reject assignee_id changes from non-admin/PM callers.
 -- WITH CHECK alone cannot compare old vs new column values, so a trigger is used.
 
-CREATE OR REPLACE FUNCTION public.prevent_task_reassignment()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION public.prevent_task_reassignment() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
     IF NOT EXISTS (
@@ -254,11 +250,7 @@ CREATE TRIGGER trg_prevent_task_reassignment
 
 -- ── Auto-Notification: Task Assigned ──────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.notify_task_assigned()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION public.notify_task_assigned() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   -- Only fire when assignee_id is set and has changed (or is new)
   IF NEW.assignee_id IS NOT NULL AND (
@@ -284,11 +276,7 @@ CREATE TRIGGER trg_notify_task_assigned
 
 -- ── Auto-Notification: Meeting Invite ─────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.notify_meeting_invite()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION public.notify_meeting_invite() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   INSERT INTO public.notifications (user_id, type, message, link) SELECT NEW.user_id, 'meeting_invite'::notification_type, 'You have been invited to a meeting', '/schedule' FROM public.meetings m WHERE m.id = NEW.meeting_id AND NEW.user_id IS DISTINCT FROM m.organizer_id;
   RETURN NEW;
@@ -302,11 +290,7 @@ CREATE TRIGGER trg_notify_meeting_invite
 
 -- ── Auto-Notification: Project Status Changed ─────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.notify_project_status_change()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION public.notify_project_status_change() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NEW.status IS DISTINCT FROM OLD.status AND NEW.manager_id IS NOT NULL THEN
     INSERT INTO public.notifications (user_id, type, message, link)
