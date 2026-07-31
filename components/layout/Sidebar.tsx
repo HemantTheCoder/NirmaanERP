@@ -14,6 +14,7 @@ import {
   LogOut,
   CheckCircle2,
   Building2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -27,13 +28,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",     href: "/dashboard",  icon: LayoutDashboard },
-  { label: "Projects",      href: "/projects",   icon: FolderKanban },
-  { label: "My Workspace",  href: "/workspace",  icon: Briefcase },
-  { label: "Schedule",      href: "/schedule",   icon: CalendarDays },
-  { label: "Approvals",     href: "/approvals",  icon: CheckCircle2, allowedRoles: ["admin", "project_manager"] },
-  { label: "Reports",       href: "/reports",    icon: BarChart3, allowedRoles: ["admin", "project_manager"] },
-  { label: "Admin",         href: "/admin",      icon: ShieldCheck, allowedRoles: ["admin"] },
+  { label: "Dashboard",       href: "/dashboard",   icon: LayoutDashboard },
+  { label: "Projects",        href: "/projects",    icon: FolderKanban },
+  { label: "My Workspace",    href: "/workspace",   icon: Briefcase },
+  { label: "Schedule",        href: "/schedule",    icon: CalendarDays },
+  { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
+  { label: "Approvals",       href: "/approvals",   icon: CheckCircle2, allowedRoles: ["admin", "project_manager"] },
+  { label: "Reports",         href: "/reports",     icon: BarChart3, allowedRoles: ["admin", "project_manager"] },
+  { label: "Admin",           href: "/admin",       icon: ShieldCheck, allowedRoles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<UserRole, string> = {

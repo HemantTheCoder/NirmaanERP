@@ -380,6 +380,44 @@ export interface Database {
           created_at?: string;
         };
       };
+      grievances: {
+        Row: {
+          id: string;
+          submitted_by: string;
+          category: GrievanceCategory;
+          title: string;
+          description: string;
+          status: GrievanceStatus;
+          assigned_to: string | null;
+          resolution_notes: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          submitted_by: string;
+          category?: GrievanceCategory;
+          title: string;
+          description: string;
+          status?: GrievanceStatus;
+          assigned_to?: string | null;
+          resolution_notes?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          submitted_by?: string;
+          category?: GrievanceCategory;
+          title?: string;
+          description?: string;
+          status?: GrievanceStatus;
+          assigned_to?: string | null;
+          resolution_notes?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -392,6 +430,8 @@ export interface Database {
       resource_type: ResourceType;
       resource_status: ResourceStatus;
       document_category: DocumentCategory;
+      grievance_category: GrievanceCategory;
+      grievance_status: GrievanceStatus;
     };
   };
 }
@@ -399,3 +439,5 @@ export interface Database {
 export type ResourceType = "material" | "equipment" | "labor";
 export type ResourceStatus = "requested" | "approved" | "in_use" | "released" | "rejected";
 export type DocumentCategory = "drawing" | "contract" | "report" | "photo" | "other";
+export type GrievanceCategory = "safety" | "hr" | "equipment" | "other";
+export type GrievanceStatus = "open" | "in_progress" | "resolved" | "closed";
