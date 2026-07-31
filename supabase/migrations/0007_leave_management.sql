@@ -38,7 +38,10 @@ CREATE POLICY "leaves_delete" ON public.leaves FOR DELETE USING (
 
 -- 3. Automatic Notification Trigger on Leave Status Changes
 CREATE OR REPLACE FUNCTION notify_leave_status_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
   status_label TEXT;
 BEGIN
@@ -66,7 +69,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS trg_notify_leave_status_change ON public.leaves;
 
