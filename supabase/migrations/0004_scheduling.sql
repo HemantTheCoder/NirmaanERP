@@ -294,7 +294,7 @@ BEGIN
   SELECT
     NEW.user_id,
     'meeting_invite'::notification_type,
-    'You have been invited to: ' || COALESCE(m.title, 'a meeting'),
+    format('You have been invited to: %s', COALESCE(m.title, 'a meeting')),
     '/schedule'
   FROM public.meetings m
   WHERE m.id = NEW.meeting_id
