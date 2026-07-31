@@ -1,0 +1,292 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Clock,
+  LogIn,
+  LogOut,
+  Calendar,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  X,
+  History,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { checkIn, checkOut, type AttendanceItem } from "@/lib/queries/attendance";
+import { cn } from "@/lib/utils";
+
+interface AttendanceTabProps {
+  userId: string;
+  initialToday: AttendanceItem | null;
+  initialHistory: AttendanceItem[];
+}
+
+const STATUS_BADGES: Record<string, { label: string; bg: string; text: string }> = {
+  present:  { label: "Present (On-Time)", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-300" },
+  late:     { label: "Late Arrival",      bg: "bg-amber-100 dark:bg-amber-950/60",   text: "text-amber-800 dark:text-amber-300" },
+  absent:   { label: "Absent",            bg: "bg-rose-100 dark:bg-rose-950/60",     text: "text-rose-800 dark:text-rose-300" },
+  half_day: { label: "Half Day",          bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-800 dark:text-indigo-300" },
+  on_leave: { label: "On Leave",          bg: "bg-slate-100 dark:bg-slate-800",       text: "text-slate-700 dark:text-slate-300" },
+};
+
+function formatTime(isoString: string | null): string {
+  if (!isoString) return "--:--";
+  return new Date(isoString).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function calculateHoursWorked(checkInIso: string | null, checkOutIso: string | null): string {
+  if (!checkInIso || !checkOutIso) return "N/A";
+  const start = new Date(checkInIso).getTime();
+  const end = new Date(checkOutIso).getTime();
+  const diffMs = end - start;
+  if (diffMs <= 0) return "0 hrs";
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+}
+
+export function AttendanceTab({
+  userId,
+  initialToday,
+  initialHistory,
+}: AttendanceTabProps) {
+  const supabase = createClient();
+
+  const [todayRecord, setTodayRecord] = useState<AttendanceItem | null>(initialToday);
+  const [history, setHistory] = useState<AttendanceItem[]>(initialHistory);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleCheckIn = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    const res = await checkIn(supabase, userId);
+    setIsLoading(false);
+
+    if (!res.success || !res.attendance) {
+      setErrorMsg(res.error || "Failed to record check-in.");
+    } else {
+      setTodayRecord(res.attendance);
+      setHistory((prev) => [res.attendance!, ...prev.filter((h) => h.id !== res.attendance!.id)]);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!todayRecord) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    const res = await checkOut(supabase, todayRecord.id);
+    setIsLoading(false);
+
+    if (!res.success || !res.attendance) {
+      setErrorMsg(res.error || "Failed to record check-out.");
+    } else {
+      setTodayRecord(res.attendance);
+      setHistory((prev) => prev.map((h) => (h.id === res.attendance!.id ? res.attendance! : h)));
+    }
+  };
+
+  const todayStatusCfg = todayRecord ? STATUS_BADGES[todayRecord.status] || STATUS_BADGES.present : null;
+
+  return (
+    <div className="space-y-6">
+      {/* Banner Error */}
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="p-1 hover:opacity-80">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Today's Status Card */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          {/* Status info */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Today's Attendance Status
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-foreground">
+                {new Date().toLocaleDateString("en-IN", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </h3>
+
+              {todayStatusCfg && (
+                <span
+                  className={cn(
+                    "inline-block px-3 py-1 rounded-full text-xs font-semibold",
+                    todayStatusCfg.bg,
+                    todayStatusCfg.text
+                  )}
+                >
+                  {todayStatusCfg.label}
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Official shift cutoff: <span className="font-semibold text-foreground">9:30 AM</span>. Check-ins after 9:30 AM are automatically marked as Late Arrival.
+            </p>
+          </div>
+
+          {/* Timestamps & Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-secondary/40 p-4 rounded-xl border border-border shrink-0">
+            <div className="flex items-center gap-6 text-xs">
+              <div>
+                <p className="text-muted-foreground font-medium">Check In</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">
+                  {todayRecord?.check_in ? formatTime(todayRecord.check_in) : "--:--"}
+                </p>
+              </div>
+
+              <div className="h-8 w-px bg-border" />
+
+              <div>
+                <p className="text-muted-foreground font-medium">Check Out</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">
+                  {todayRecord?.check_out ? formatTime(todayRecord.check_out) : "--:--"}
+                </p>
+              </div>
+
+              <div className="h-8 w-px bg-border" />
+
+              <div>
+                <p className="text-muted-foreground font-medium">Hours</p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {calculateHoursWorked(todayRecord?.check_in || null, todayRecord?.check_out || null)}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="w-full sm:w-auto pt-2 sm:pt-0">
+              {!todayRecord ? (
+                <button
+                  onClick={handleCheckIn}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                  Check In Now
+                </button>
+              ) : !todayRecord.check_out ? (
+                <button
+                  onClick={handleCheckOut}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-all shadow-sm"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                  Check Out
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 px-4 py-2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-xl text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Shift Completed
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* History Table */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm space-y-4 p-6">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <History className="w-4 h-4 text-indigo-500" />
+            Attendance Logs (Last 30 Days)
+          </h4>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-secondary/50 border-b border-border text-muted-foreground uppercase tracking-wider font-semibold">
+              <tr>
+                <th className="px-5 py-3.5">Date</th>
+                <th className="px-5 py-3.5">Check In</th>
+                <th className="px-5 py-3.5">Check Out</th>
+                <th className="px-5 py-3.5">Hours Worked</th>
+                <th className="px-5 py-3.5 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {history.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10 text-muted-foreground">
+                    No attendance records found for the past 30 days.
+                  </td>
+                </tr>
+              ) : (
+                history.map((record) => {
+                  const statusCfg = STATUS_BADGES[record.status] || STATUS_BADGES.present;
+
+                  return (
+                    <tr key={record.id} className="hover:bg-muted/40 transition-colors">
+                      <td className="px-5 py-3.5 font-bold text-foreground">
+                        {new Date(record.date).toLocaleDateString("en-IN", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-muted-foreground font-medium">
+                        {formatTime(record.check_in)}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-muted-foreground font-medium">
+                        {formatTime(record.check_out)}
+                      </td>
+
+                      <td className="px-5 py-3.5 font-semibold text-foreground">
+                        {calculateHoursWorked(record.check_in, record.check_out)}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-right">
+                        <span
+                          className={cn(
+                            "inline-block px-2.5 py-1 rounded-md text-xs font-semibold",
+                            statusCfg.bg,
+                            statusCfg.text
+                          )}
+                        >
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -26,6 +26,7 @@ export interface Database {
           full_name: string | null;
           role: UserRole;
           avatar_url: string | null;
+          phone: string | null;
           created_at: string;
           is_active: boolean;
         };
@@ -35,6 +36,7 @@ export interface Database {
           full_name?: string | null;
           role?: UserRole;
           avatar_url?: string | null;
+          phone?: string | null;
           created_at?: string;
           is_active?: boolean;
         };
@@ -44,6 +46,7 @@ export interface Database {
           full_name?: string | null;
           role?: UserRole;
           avatar_url?: string | null;
+          phone?: string | null;
           created_at?: string;
           is_active?: boolean;
         };
@@ -131,7 +134,7 @@ export interface Database {
           date: string;
           check_in: string | null;
           check_out: string | null;
-          status: "present" | "absent" | "half_day" | "on_leave";
+          status: "present" | "absent" | "half_day" | "on_leave" | "late";
           created_at: string;
         };
         Insert: {
@@ -140,7 +143,7 @@ export interface Database {
           date: string;
           check_in?: string | null;
           check_out?: string | null;
-          status?: "present" | "absent" | "half_day" | "on_leave";
+          status?: "present" | "absent" | "half_day" | "on_leave" | "late";
           created_at?: string;
         };
         Update: {
@@ -149,7 +152,7 @@ export interface Database {
           date?: string;
           check_in?: string | null;
           check_out?: string | null;
-          status?: "present" | "absent" | "half_day" | "on_leave";
+          status?: "present" | "absent" | "half_day" | "on_leave" | "late";
           created_at?: string;
         };
       };
