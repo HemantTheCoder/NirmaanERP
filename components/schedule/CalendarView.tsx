@@ -356,7 +356,7 @@ export function CalendarView({
       const start_time = new Date(formData.start_datetime).toISOString();
       const end_time = new Date(formData.end_datetime).toISOString();
 
-      await createMeetingWithAttendees(
+      const { data, error } = await createMeetingWithAttendees(
         supabase,
         {
           title: formData.title,
@@ -370,12 +370,19 @@ export function CalendarView({
         formData.attendee_ids
       );
 
+      if (error) {
+        console.error("Failed to create meeting:", error);
+        alert(`Failed to create meeting: ${error.message || "Database insert error"}`);
+        return;
+      }
+
       // Re-fetch all meetings to sync state
       const fresh = await getMeetings(supabase);
       setMeetings(fresh);
       setIsFormOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating meeting:", err);
+      alert(`Error creating meeting: ${err.message || "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -542,9 +549,9 @@ export function CalendarView({
   const selectedDayMeetings = selectedDay ? meetingsForDay(selectedDay) : [];
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-200px)] min-h-[520px]">
+    <div className="flex flex-col lg:flex-row gap-4 min-h-[680px] pb-6">
       {/* Calendar panel */}
-      <div className="flex-1 min-w-0 bg-card border border-border rounded-xl overflow-hidden flex flex-col">
+      <div className="flex-1 min-w-0 bg-card border border-border rounded-xl flex flex-col shadow-xs">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border">
           {/* Prev / Next */}
@@ -619,7 +626,7 @@ export function CalendarView({
         </div>
 
         {/* Calendar grid */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto flex flex-col">
           {viewMode === "month" ? renderMonthView() : renderWeekView()}
         </div>
       </div>

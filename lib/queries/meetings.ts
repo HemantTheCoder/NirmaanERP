@@ -64,8 +64,8 @@ export async function getMeetings(
     .select(`
       id, title, start_time, end_time, location_type, location_detail,
       status, project_id, organizer_id,
-      users!organizer_id(full_name),
-      projects!project_id(name)
+      users(full_name),
+      projects(name)
     `)
     .order("start_time", { ascending: true });
 
@@ -100,8 +100,8 @@ export async function getMeetingById(
     .select(`
       id, title, start_time, end_time, location_type, location_detail,
       status, project_id, organizer_id,
-      users!organizer_id(full_name),
-      projects!project_id(name),
+      users(full_name),
+      projects(name),
       meeting_attendees(
         rsvp_status,
         users(id, full_name, email)
@@ -176,8 +176,8 @@ export async function createMeetingWithAttendees(
     .select(`
       id, title, start_time, end_time, location_type, location_detail,
       status, project_id, organizer_id,
-      users!organizer_id(full_name),
-      projects!project_id(name)
+      users(full_name),
+      projects(name)
     `)
     .single();
 
