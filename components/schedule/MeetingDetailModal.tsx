@@ -257,11 +257,11 @@ export function MeetingDetailModal({
                       Attendees ({meeting.attendees.length})
                     </p>
                     <div className="space-y-1.5">
-                      {meeting.attendees.map((a) => {
+                      {meeting.attendees.map((a, idx) => {
                         const cfg = RSVP_CONFIG[a.rsvp_status];
                         return (
                           <div
-                            key={a.user?.id ?? Math.random()}
+                            key={a.user?.id ?? `att-${idx}`}
                             className="flex items-center justify-between"
                           >
                             <span className="text-sm text-foreground">

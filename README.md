@@ -1,141 +1,143 @@
 # Nirmaan ERP
 
-A modern construction management ERP built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Supabase**.
+A modern, production-grade construction management ERP built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, **Recharts**, and **Supabase**.
+
+---
+
+## Features
+
+- **Dashboard**: Real-time project KPIs, active project progress lists, and upcoming meeting widgets.
+- **Projects**: Project CRUD, status lifecycle management (`planning`, `active`, `on_hold`, `completed`), and progress calculations.
+- **My Workspace**: Interactive Drag-and-Drop Kanban Task Board (`todo`, `in_progress`, `review`, `done`) with real-time assignment guards.
+- **Schedule & Calendar**: Month/Week view calendar with live RSVP buttons and text-only meeting minutes.
+- **Notifications**: Low-overhead unread bell polling with automatic DB triggers for task assignments, meeting invites, and project status changes.
+- **Reports & Analytics**: Recharts visual dashboards (Project Status Breakdown, Task Completion Trend, Team Workload, Project Progress Comparison), date/project filter bar, per-card CSV export, and print-to-PDF formatting.
+- **Admin Console**: User provisioning & invitation, dynamic role management, active/inactive status toggles (blocking deactivated users at middleware), 7-table orphan checks before deletion, last-admin protection guards, access-control matrix, and global session revocation.
 
 ---
 
 ## Tech Stack
 
-| Layer       | Technology                          |
-|-------------|-------------------------------------|
-| Framework   | Next.js 16 (App Router)             |
-| Language    | TypeScript 5                        |
-| Styling     | Tailwind CSS v4                     |
-| Auth / DB   | Supabase (Postgres + Auth + Storage)|
-| Icons       | Lucide React                        |
-| Deploy      | Vercel                              |
+| Layer | Technology |
+| :--- | :--- |
+| **Framework** | Next.js 16 (App Router & Turbopack) |
+| **Language** | TypeScript 5 |
+| **Styling** | Tailwind CSS v4 |
+| **Database & Auth** | Supabase (Postgres, Row-Level Security, Auth) |
+| **Charts & Data** | Recharts |
+| **Drag & Drop** | `@dnd-kit/core` & `@dnd-kit/sortable` |
+| **Icons** | Lucide React |
 
 ---
 
 ## Project Structure
 
-```
+```text
 ├── app/
-│   ├── (auth)/           # Login & signup pages (no sidebar)
-│   │   ├── login/
-│   │   └── signup/
-│   ├── (dashboard)/      # Authenticated shell — sidebar + header
-│   │   ├── layout.tsx    # Validates session, fetches profile
-│   │   ├── dashboard/    # Dashboard with KPIs, progress, meetings
-│   │   ├── projects/     # Phase 2: project CRUD
-│   │   ├── workspace/    # Phase 2: personal task board
-│   │   ├── schedule/     # Phase 2: Gantt / calendar
-│   │   ├── reports/      # Phase 2: analytics
-│   │   └── admin/        # Admin-only settings
-│   ├── layout.tsx        # Root HTML shell, fonts, global CSS
-│   └── page.tsx          # Redirects "/" → "/dashboard"
+│   ├── (auth)/           # Login & signup pages
+│   ├── (dashboard)/      # Authenticated shell & pages
+│   │   ├── admin/        # Admin console & role management
+│   │   ├── dashboard/    # Main KPIs & project overview
+│   │   ├── projects/     # Project management
+│   │   ├── reports/      # Analytics & Recharts dashboards
+│   │   ├── schedule/     # Calendar & meeting scheduling
+│   │   ├── workspace/    # Kanban task board
+│   │   ├── loading.tsx   # Dashboard loading skeleton
+│   │   └── error.tsx     # Error boundary handler
+│   ├── api/
+│   │   └── admin/        # Isolated server-side API routes
+│   ├── not-found.tsx     # Custom styled 404 page
+│   ├── layout.tsx        # Root HTML shell & global CSS
+│   └── page.tsx          # Root redirect
 ├── components/
-│   ├── auth/             # LoginForm, SignupForm
+│   ├── admin/            # UsersTab, RolesTab, SessionsTab, AdminView
 │   ├── dashboard/        # KpiCard, ProjectProgressList, UpcomingMeetings
-│   └── layout/           # AppShell, Sidebar, Header
+│   ├── layout/           # AppShell, Sidebar, Header, NotificationBell
+│   ├── projects/         # Project Cards & Modals
+│   ├── reports/          # ReportsView & Recharts cards
+│   ├── schedule/         # CalendarView & Meeting Modals
+│   └── workspace/        # KanbanBoard, KanbanColumn, TaskCard
 ├── lib/
-│   ├── supabase/
-│   │   ├── client.ts     # Browser client
-│   │   └── server.ts     # Server component client
-│   └── utils.ts          # cn() utility
-├── types/
-│   └── database.ts       # TypeScript types matching the DB schema
+│   ├── queries/          # Modular Supabase query layer
+│   └── supabase/         # SSR & Client Supabase factories
 ├── supabase/
-│   └── migrations/
-│       └── 0001_initial_schema.sql
-├── middleware.ts          # Session refresh + route protection
-├── .env.example
-└── .env.local            # ← fill this in (never commit)
+│   └── migrations/       # SQL Migrations (0001 to 0006)
+├── scripts/
+│   └── seed-demo-data.ts # Demo data seeder
+└── proxy.ts              # Route protection & deactivation middleware
 ```
 
 ---
 
-## Setup
+## Setup & Local Development
 
-### 1. Clone & install
+### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/your-org/nirmaan-erp.git
-cd nirmaan-erp
+git clone https://github.com/HemantTheCoder/NirmaanERP.git
+cd NirmaanERP
 npm install
 ```
 
-### 2. Create a Supabase project
+### 2. Configure Environment Variables
 
-1. Go to [supabase.com](https://supabase.com) → **New project**
-2. Copy your **Project URL** and **anon public key** from  
-   `Project Settings → API`
-
-### 3. Configure environment variables
+Copy `.env.example` to `.env.local`:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local`:
+Fill in your Supabase credentials in `.env.local`:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
 ```
 
-### 4. Apply the database schema
+### 3. Run Database Migrations
 
-Open the Supabase **SQL Editor** and paste the contents of  
-`supabase/migrations/0001_initial_schema.sql`, then run it.
+In your Supabase Dashboard **SQL Editor**, execute the migration files located in `supabase/migrations/` in sequential order:
 
-> This creates all tables, enums, RLS policies, and a trigger that  
-> auto-creates a `public.users` profile row on every new signup.
+1. `0001_initial_schema.sql` — Base tables, enums, RLS policies.
+2. `0002_rls_hardening.sql` — RLS policy hardening for tasks & projects.
+3. `0003_seed_data.sql` — Base project & task seeds.
+4. `0004_scheduling.sql` — Meetings, attendees, minutes, notifications, and triggers.
+5. `0005_reports_and_completed_at.sql` — Completion tracking & backfilling.
+6. `0006_admin_users_is_active.sql` — User active/inactive status column.
 
-### 5. Run locally
+### 4. Seed Realistic Demo Data
+
+Run the seeder script to populate realistic accounts, projects, tasks, and meetings:
+
+```bash
+npx tsx scripts/seed-demo-data.ts
+```
+
+### 5. Run the Application
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## User Roles
+## Demo Accounts Reference
 
-| Role              | Description                         |
-|-------------------|-------------------------------------|
-| `admin`           | Full access — promoted manually in Supabase table editor |
-| `project_manager` | Create/manage projects and tasks    |
-| `site_staff`      | View tasks, log attendance          |
-| `client`          | Read-only project visibility        |
+All demo accounts share the default password: **`Demo@1234`**
 
-> **Security note:** The signup form intentionally omits `admin` from the  
-> role dropdown. To promote yourself to admin, run this in the SQL editor:  
-> `UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';`
-
----
-
-## Deploying to Vercel
-
-1. Push this repo to GitHub
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repo
-3. In **Environment Variables**, add:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. Click **Deploy**
-
-The build should succeed with zero configuration — no custom build command needed.
-
----
-
-## Roadmap
-
-- **Phase 1 (current):** Foundation + navigation shell + dashboard
-- **Phase 2:** Project CRUD, My Workspace task board, Supabase real-time
-- **Phase 3:** Schedule / Gantt, Reports / analytics
-- **Phase 4:** Admin panel, role management
+| Role | Name | Email | Permissions |
+| :--- | :--- | :--- | :--- |
+| **Admin** | Rahul Sharma | `pm1@nirmaan.dev` | Full access, user management, reports, projects |
+| **Project Manager** | Priya Patel | `pm2@nirmaan.dev` | Projects, tasks, schedule, reports |
+| **Site Staff** | Amit Kumar | `siteeng1@nirmaan.dev` | My Workspace, task updates, schedule |
+| **Site Staff** | Sneha Verma | `siteeng2@nirmaan.dev` | My Workspace, task updates, schedule |
+| **Site Staff** | Vikas Singh | `siteeng3@nirmaan.dev` | My Workspace, task updates, schedule |
+| **Site Staff** | Ananya Joshi | `siteeng4@nirmaan.dev` | My Workspace, task updates, schedule |
+| **Client** | Vikram Mehta | `client1@nirmaan.dev` | Read-only project & workspace visibility |
+| **Client** | Sunita Reddy | `client2@nirmaan.dev` | Read-only project & workspace visibility |
 
 ---
 
