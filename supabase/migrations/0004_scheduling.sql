@@ -95,6 +95,32 @@ CREATE INDEX IF NOT EXISTS idx_meeting_attendees_user_id ON public.meeting_atten
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id     ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read   ON public.notifications(user_id, read);
 
+-- ── Helper functions for RLS (SECURITY DEFINER to avoid policy recursion) ─────
+
+CREATE OR REPLACE FUNCTION public.is_meeting_organizer(_meeting_id UUID, _user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.meetings
+    WHERE id = _meeting_id AND organizer_id = _user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_meeting_attendee(_meeting_id UUID, _user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.meeting_attendees
+    WHERE meeting_id = _meeting_id AND user_id = _user_id
+  );
+$$;
+
 -- ── Row-Level Security ────────────────────────────────────────────────────────
 
 ALTER TABLE public.meetings          ENABLE ROW LEVEL SECURITY;
@@ -109,28 +135,18 @@ DROP POLICY IF EXISTS "meetings_update" ON public.meetings;
 DROP POLICY IF EXISTS "meetings_delete" ON public.meetings;
 
 CREATE POLICY "meetings_select" ON public.meetings FOR SELECT USING (
-  organizer_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.meeting_attendees
-    WHERE meeting_id = id AND user_id = auth.uid()
-  )
+  organizer_id = auth.uid() OR public.is_meeting_attendee(id, auth.uid())
 );
 CREATE POLICY "meetings_insert" ON public.meetings FOR INSERT WITH CHECK (
   auth.role() = 'authenticated'
 );
 CREATE POLICY "meetings_update" ON public.meetings FOR UPDATE USING (
   organizer_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role IN ('admin', 'project_manager')
-  )
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
 );
 CREATE POLICY "meetings_delete" ON public.meetings FOR DELETE USING (
   organizer_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role IN ('admin', 'project_manager')
-  )
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
 );
 
 -- meeting_attendees: attendee sees own rows; organizer sees all rows for their meeting
@@ -140,34 +156,18 @@ DROP POLICY IF EXISTS "attendees_update" ON public.meeting_attendees;
 DROP POLICY IF EXISTS "attendees_delete" ON public.meeting_attendees;
 
 CREATE POLICY "attendees_select" ON public.meeting_attendees FOR SELECT USING (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.meetings
-    WHERE id = meeting_id AND organizer_id = auth.uid()
-  )
+  user_id = auth.uid() OR public.is_meeting_organizer(meeting_id, auth.uid())
 );
 CREATE POLICY "attendees_insert" ON public.meeting_attendees FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.meetings
-    WHERE id = meeting_id AND organizer_id = auth.uid()
-  ) OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role IN ('admin', 'project_manager')
-  )
+  public.is_meeting_organizer(meeting_id, auth.uid()) OR
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
 );
 CREATE POLICY "attendees_update" ON public.meeting_attendees FOR UPDATE USING (
   user_id = auth.uid()
 );
 CREATE POLICY "attendees_delete" ON public.meeting_attendees FOR DELETE USING (
-  EXISTS (
-    SELECT 1 FROM public.meetings
-    WHERE id = meeting_id AND organizer_id = auth.uid()
-  ) OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role IN ('admin', 'project_manager')
-  )
+  public.is_meeting_organizer(meeting_id, auth.uid()) OR
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'project_manager'))
 );
 
 -- meeting_minutes: all meeting members can SELECT; only organizer/admin can INSERT/UPDATE
@@ -176,36 +176,16 @@ DROP POLICY IF EXISTS "minutes_insert" ON public.meeting_minutes;
 DROP POLICY IF EXISTS "minutes_update" ON public.meeting_minutes;
 
 CREATE POLICY "minutes_select" ON public.meeting_minutes FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM public.meetings m
-    WHERE m.id = meeting_id AND (
-      m.organizer_id = auth.uid() OR
-      EXISTS (
-        SELECT 1 FROM public.meeting_attendees
-        WHERE meeting_id = m.id AND user_id = auth.uid()
-      )
-    )
-  )
+  public.is_meeting_organizer(meeting_id, auth.uid()) OR
+  public.is_meeting_attendee(meeting_id, auth.uid())
 );
 CREATE POLICY "minutes_insert" ON public.meeting_minutes FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.meetings m
-    WHERE m.id = meeting_id AND m.organizer_id = auth.uid()
-  ) OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role = 'admin'
-  )
+  public.is_meeting_organizer(meeting_id, auth.uid()) OR
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
 );
 CREATE POLICY "minutes_update" ON public.meeting_minutes FOR UPDATE USING (
-  EXISTS (
-    SELECT 1 FROM public.meetings m
-    WHERE m.id = meeting_id AND m.organizer_id = auth.uid()
-  ) OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role = 'admin'
-  )
+  public.is_meeting_organizer(meeting_id, auth.uid()) OR
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- notifications: each user sees and updates only their own
