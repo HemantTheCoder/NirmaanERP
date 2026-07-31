@@ -244,9 +244,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_prevent_task_reassignment ON public.tasks;
-CREATE TRIGGER trg_prevent_task_reassignment
-  BEFORE UPDATE ON public.tasks
-  FOR EACH ROW EXECUTE FUNCTION public.prevent_task_reassignment();
+CREATE TRIGGER trg_prevent_task_reassignment BEFORE UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION public.prevent_task_reassignment();
 
 -- ── Auto-Notification: Task Assigned ──────────────────────────────────────────
 
@@ -270,9 +268,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_notify_task_assigned ON public.tasks;
-CREATE TRIGGER trg_notify_task_assigned
-  AFTER INSERT OR UPDATE OF assignee_id ON public.tasks
-  FOR EACH ROW EXECUTE FUNCTION public.notify_task_assigned();
+CREATE TRIGGER trg_notify_task_assigned AFTER INSERT OR UPDATE OF assignee_id ON public.tasks FOR EACH ROW EXECUTE FUNCTION public.notify_task_assigned();
 
 -- ── Auto-Notification: Meeting Invite ─────────────────────────────────────────
 
@@ -284,9 +280,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_notify_meeting_invite ON public.meeting_attendees;
-CREATE TRIGGER trg_notify_meeting_invite
-  AFTER INSERT ON public.meeting_attendees
-  FOR EACH ROW EXECUTE FUNCTION public.notify_meeting_invite();
+CREATE TRIGGER trg_notify_meeting_invite AFTER INSERT ON public.meeting_attendees FOR EACH ROW EXECUTE FUNCTION public.notify_meeting_invite();
 
 -- ── Auto-Notification: Project Status Changed ─────────────────────────────────
 
@@ -306,6 +300,4 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_notify_project_status_change ON public.projects;
-CREATE TRIGGER trg_notify_project_status_change
-  AFTER UPDATE OF status ON public.projects
-  FOR EACH ROW EXECUTE FUNCTION public.notify_project_status_change();
+CREATE TRIGGER trg_notify_project_status_change AFTER UPDATE OF status ON public.projects FOR EACH ROW EXECUTE FUNCTION public.notify_project_status_change();
