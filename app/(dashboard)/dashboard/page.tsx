@@ -6,6 +6,7 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ProjectProgressList } from "@/components/dashboard/ProjectProgressList";
 import { UpcomingMeetings } from "@/components/dashboard/UpcomingMeetings";
 import Link from "next/link";
+import { getInUseResourceCount } from "@/lib/queries/resources";
 import type { UserRole } from "@/types/database";
 import {
   FolderKanban,
@@ -13,6 +14,7 @@ import {
   Users,
   ClipboardList,
   BarChart3,
+  Package,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -36,12 +38,13 @@ export default async function DashboardPage() {
   const profile = profileData as { role: UserRole } | null;
   const canViewReports = profile?.role === "admin" || profile?.role === "project_manager";
 
-  // Run 5 parallel queries: 4 count queries + project progress + upcoming meetings
+  // Run 6 parallel queries: 5 count queries + project progress + upcoming meetings
   const [
     { count: activeProjectsCount },
     { count: openTasksCount },
     { count: teamMembersCount },
     { count: pendingLeavesCount },
+    inUseResources,
     projectsProgress,
     upcomingMeetings,
   ] = await Promise.all([
@@ -58,6 +61,7 @@ export default async function DashboardPage() {
       .from("leaves")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
+    getInUseResourceCount(supabase),
     getProjectsWithProgress(supabase),
     getUpcomingMeetings(supabase, 3),
   ]);
@@ -96,6 +100,15 @@ export default async function DashboardPage() {
       color: "violet" as const,
     },
     {
+      id: "kpi-resources-in-use",
+      label: "Resources In-Use",
+      value: inUseResources.toString(),
+      change: inUseResources > 0 ? "Allocated site assets" : "No active allocations",
+      trend: "up" as const,
+      icon: Package,
+      color: "indigo" as const,
+    },
+    {
       id: "kpi-pending-approvals",
       label: "Pending Approvals",
       value: pendingLeaves.toString(),
@@ -130,7 +143,7 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <section aria-label="Key performance indicators">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {KPI_DATA.map((kpi) => (
             <KpiCard key={kpi.id} {...kpi} />
           ))}

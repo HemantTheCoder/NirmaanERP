@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectById } from "@/lib/queries/projects";
+import { getProjectResources } from "@/lib/queries/resources";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
+import type { UserRole } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,27 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   const { id } = await params;
   const supabase = await createClient();
 
-  const data = await getProjectById(supabase, id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch caller's profile role
+  const { data: profile } = await (supabase.from("users") as any)
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const userRole = (profile?.role ?? "site_staff") as UserRole;
+
+  const [data, resources] = await Promise.all([
+    getProjectById(supabase, id),
+    getProjectResources(supabase, id),
+  ]);
+
   if (!data) {
     notFound();
   }
@@ -34,6 +56,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     <ProjectDetailView
       project={data.project}
       initialTasks={data.tasks}
+      initialResources={resources}
+      userId={user.id}
+      userRole={userRole}
     />
   );
 }

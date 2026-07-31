@@ -10,10 +10,14 @@ import {
   ListTodo,
   GanttChart,
   FileText,
+  Package,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
+import { ProjectResourcesView } from "@/components/projects/ProjectResourcesView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
+import type { ResourceAllocationItem } from "@/lib/queries/resources";
+import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface ProjectDetailViewProps {
@@ -27,11 +31,20 @@ interface ProjectDetailViewProps {
     manager_name: string | null;
   };
   initialTasks: any[];
+  initialResources: ResourceAllocationItem[];
+  userId: string;
+  userRole: UserRole;
 }
 
-export function ProjectDetailView({ project, initialTasks }: ProjectDetailViewProps) {
+export function ProjectDetailView({
+  project,
+  initialTasks,
+  initialResources,
+  userId,
+  userRole,
+}: ProjectDetailViewProps) {
   const [tasks, setTasks] = useState<any[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -144,6 +157,19 @@ export function ProjectDetailView({ project, initialTasks }: ProjectDetailViewPr
               <GanttChart className="w-3.5 h-3.5 text-indigo-600" />
               Timeline (Gantt)
             </button>
+
+            <button
+              onClick={() => setActiveTab("resources")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "resources"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Package className="w-3.5 h-3.5 text-amber-500" />
+              Resources ({initialResources.length})
+            </button>
           </div>
         </div>
 
@@ -219,6 +245,16 @@ export function ProjectDetailView({ project, initialTasks }: ProjectDetailViewPr
           <ProjectGanttChart
             tasks={tasks}
             onTaskClick={(task) => setSelectedTask(task)}
+          />
+        )}
+
+        {/* Tab 3: Resources */}
+        {activeTab === "resources" && (
+          <ProjectResourcesView
+            initialResources={initialResources}
+            projectId={project.id}
+            userId={userId}
+            userRole={userRole}
           />
         )}
       </div>

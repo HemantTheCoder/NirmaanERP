@@ -298,6 +298,50 @@ export interface Database {
           created_at?: string;
         };
       };
+      resource_allocations: {
+        Row: {
+          id: string;
+          project_id: string;
+          resource_type: ResourceType;
+          resource_name: string;
+          quantity: number;
+          unit: string;
+          status: ResourceStatus;
+          requested_by: string;
+          approved_by: string | null;
+          requested_date: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          resource_type: ResourceType;
+          resource_name: string;
+          quantity?: number;
+          unit: string;
+          status?: ResourceStatus;
+          requested_by: string;
+          approved_by?: string | null;
+          requested_date?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          resource_type?: ResourceType;
+          resource_name?: string;
+          quantity?: number;
+          unit?: string;
+          status?: ResourceStatus;
+          requested_by?: string;
+          approved_by?: string | null;
+          requested_date?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -307,6 +351,11 @@ export interface Database {
       meeting_status: MeetingStatus;
       rsvp_status: RsvpStatus;
       notification_type: NotificationType;
+      resource_type: ResourceType;
+      resource_status: ResourceStatus;
     };
   };
 }
+
+export type ResourceType = "material" | "equipment" | "labor";
+export type ResourceStatus = "requested" | "approved" | "in_use" | "released" | "rejected";
