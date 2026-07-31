@@ -64,7 +64,7 @@ export async function getMeetings(
     .select(`
       id, title, start_time, end_time, location_type, location_detail,
       status, project_id, organizer_id,
-      users(full_name),
+      users!organizer_id(full_name),
       projects(name)
     `)
     .order("start_time", { ascending: true });
@@ -100,7 +100,7 @@ export async function getMeetingById(
     .select(`
       id, title, start_time, end_time, location_type, location_detail,
       status, project_id, organizer_id,
-      users(full_name),
+      users!organizer_id(full_name),
       projects(name),
       meeting_attendees(
         rsvp_status,
@@ -173,12 +173,7 @@ export async function createMeetingWithAttendees(
       location_type: payload.location_type,
       location_detail: payload.location_detail || null,
     })
-    .select(`
-      id, title, start_time, end_time, location_type, location_detail,
-      status, project_id, organizer_id,
-      users(full_name),
-      projects(name)
-    `)
+    .select("id, title, start_time, end_time, location_type, location_detail, status, project_id, organizer_id")
     .single();
 
   if (error || !meeting) {
