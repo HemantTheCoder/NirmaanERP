@@ -289,23 +289,17 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE
-  v_title       TEXT;
-  v_organizer   UUID;
 BEGIN
-  SELECT title, organizer_id INTO v_title, v_organizer
-  FROM public.meetings WHERE id = NEW.meeting_id;
+  INSERT INTO public.notifications (user_id, type, message, link)
+  SELECT
+    NEW.user_id,
+    'meeting_invite'::notification_type,
+    'You have been invited to: ' || COALESCE(m.title, 'a meeting'),
+    '/schedule'
+  FROM public.meetings m
+  WHERE m.id = NEW.meeting_id
+    AND NEW.user_id IS DISTINCT FROM m.organizer_id;
 
-  -- Do not send notification to the organizer about their own meeting
-  IF NEW.user_id IS DISTINCT FROM v_organizer THEN
-    INSERT INTO public.notifications (user_id, type, message, link)
-    VALUES (
-      NEW.user_id,
-      'meeting_invite',
-      'You have been invited to: ' || COALESCE(v_title, 'a meeting'),
-      '/schedule'
-    );
-  END IF;
   RETURN NEW;
 END;
 $$;
