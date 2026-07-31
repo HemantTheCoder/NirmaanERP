@@ -427,6 +427,53 @@ export interface Database {
           resolved_at?: string | null;
         };
       };
+      safety_incidents: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          reported_by: string;
+          incident_type: IncidentType;
+          severity: IncidentSeverity;
+          title: string;
+          description: string;
+          location_detail: string;
+          corrective_action: string | null;
+          status: IncidentStatus;
+          assigned_to: string | null;
+          created_at: string;
+          closed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          reported_by: string;
+          incident_type?: IncidentType;
+          severity?: IncidentSeverity;
+          title: string;
+          description: string;
+          location_detail: string;
+          corrective_action?: string | null;
+          status?: IncidentStatus;
+          assigned_to?: string | null;
+          created_at?: string;
+          closed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          reported_by?: string;
+          incident_type?: IncidentType;
+          severity?: IncidentSeverity;
+          title?: string;
+          description?: string;
+          location_detail?: string;
+          corrective_action?: string | null;
+          status?: IncidentStatus;
+          assigned_to?: string | null;
+          created_at?: string;
+          closed_at?: string | null;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -441,6 +488,9 @@ export interface Database {
       document_category: DocumentCategory;
       grievance_category: GrievanceCategory;
       grievance_status: GrievanceStatus;
+      incident_type: IncidentType;
+      incident_severity: IncidentSeverity;
+      incident_status: IncidentStatus;
     };
   };
 }
@@ -450,3 +500,6 @@ export type ResourceStatus = "requested" | "approved" | "in_use" | "released" | 
 export type DocumentCategory = "drawing" | "contract" | "report" | "photo" | "other";
 export type GrievanceCategory = "safety" | "hr" | "equipment" | "other";
 export type GrievanceStatus = "open" | "in_progress" | "resolved" | "closed";
+export type IncidentType = "near_miss" | "incident";
+export type IncidentSeverity = "low" | "medium" | "high" | "critical";
+export type IncidentStatus = "reported" | "under_review" | "action_taken" | "closed";

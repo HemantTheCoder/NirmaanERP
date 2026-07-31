@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Building2,
   AlertCircle,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Projects",        href: "/projects",    icon: FolderKanban },
   { label: "My Workspace",    href: "/workspace",   icon: Briefcase },
   { label: "Schedule",        href: "/schedule",    icon: CalendarDays },
+  { label: "Safety Reports",  href: "/safety",      icon: ShieldAlert },
   { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
   { label: "Approvals",       href: "/approvals",   icon: CheckCircle2, allowedRoles: ["admin", "project_manager"] },
   { label: "Reports",         href: "/reports",     icon: BarChart3, allowedRoles: ["admin", "project_manager"] },
@@ -70,6 +72,7 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
 
   const CLIENT_NAV_ITEMS: NavItem[] = [
     { label: "Client Portal",   href: "/dashboard",   icon: LayoutDashboard },
+    { label: "Safety Reports",  href: "/safety",      icon: ShieldAlert },
     { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
   ];
 
