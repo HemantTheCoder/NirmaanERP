@@ -5,11 +5,14 @@ import { getUpcomingMeetings } from "@/lib/queries/meetings";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ProjectProgressList } from "@/components/dashboard/ProjectProgressList";
 import { UpcomingMeetings } from "@/components/dashboard/UpcomingMeetings";
+import Link from "next/link";
+import type { UserRole } from "@/types/database";
 import {
   FolderKanban,
   CheckSquare,
   Users,
   ClipboardList,
+  BarChart3,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -21,6 +24,17 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profileData } = user
+    ? await (supabase.from("users") as any).select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const profile = profileData as { role: UserRole } | null;
+  const canViewReports = profile?.role === "admin" || profile?.role === "project_manager";
 
   // Run 5 parallel queries: 4 count queries + project progress + upcoming meetings
   const [
@@ -95,11 +109,22 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page header */}
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Good morning 👋</h2>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Here&apos;s what&apos;s happening across your projects today.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Good morning 👋</h2>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Here&apos;s what&apos;s happening across your projects today.
+          </p>
+        </div>
+        {canViewReports && (
+          <Link
+            href="/reports"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900 w-fit"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            View full reports →
+          </Link>
+        )}
       </div>
 
       {/* KPI Cards */}

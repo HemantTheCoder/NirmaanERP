@@ -22,7 +22,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
+  allowedRoles?: UserRole[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -30,8 +30,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Projects",      href: "/projects",   icon: FolderKanban },
   { label: "My Workspace",  href: "/workspace",  icon: Briefcase },
   { label: "Schedule",      href: "/schedule",   icon: CalendarDays },
-  { label: "Reports",       href: "/reports",    icon: BarChart3 },
-  { label: "Admin",         href: "/admin",      icon: ShieldCheck, adminOnly: true },
+  { label: "Reports",       href: "/reports",    icon: BarChart3, allowedRoles: ["admin", "project_manager"] },
+  { label: "Admin",         href: "/admin",      icon: ShieldCheck, allowedRoles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -65,7 +65,7 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
   const supabase = createClient();
 
   const visibleNav = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || user.role === "admin"
+    (item) => !item.allowedRoles || item.allowedRoles.includes(user.role)
   );
 
   async function handleLogout() {
