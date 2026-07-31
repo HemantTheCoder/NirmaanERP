@@ -90,6 +90,7 @@ export interface Database {
           project_id: string | null;
           assignee_id: string | null;
           due_date: string | null;
+          start_date: string | null;
           created_at: string;
           updated_at: string;
           completed_at: string | null;
@@ -103,6 +104,7 @@ export interface Database {
           project_id?: string | null;
           assignee_id?: string | null;
           due_date?: string | null;
+          start_date?: string | null;
           created_at?: string;
           updated_at?: string;
           completed_at?: string | null;
@@ -116,6 +118,7 @@ export interface Database {
           project_id?: string | null;
           assignee_id?: string | null;
           due_date?: string | null;
+          start_date?: string | null;
           created_at?: string;
           updated_at?: string;
           completed_at?: string | null;
