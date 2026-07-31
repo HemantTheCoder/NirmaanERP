@@ -11,12 +11,15 @@ import {
   GanttChart,
   FileText,
   Package,
+  Folder,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
 import { ProjectResourcesView } from "@/components/projects/ProjectResourcesView";
+import { ProjectDocumentsView } from "@/components/projects/ProjectDocumentsView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
 import type { ResourceAllocationItem } from "@/lib/queries/resources";
+import type { ProjectDocumentItem } from "@/lib/queries/documents";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +35,7 @@ interface ProjectDetailViewProps {
   };
   initialTasks: any[];
   initialResources: ResourceAllocationItem[];
+  initialDocuments: ProjectDocumentItem[];
   userId: string;
   userRole: UserRole;
 }
@@ -40,11 +44,12 @@ export function ProjectDetailView({
   project,
   initialTasks,
   initialResources,
+  initialDocuments,
   userId,
   userRole,
 }: ProjectDetailViewProps) {
   const [tasks, setTasks] = useState<any[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -170,6 +175,19 @@ export function ProjectDetailView({
               <Package className="w-3.5 h-3.5 text-amber-500" />
               Resources ({initialResources.length})
             </button>
+
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "documents"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Folder className="w-3.5 h-3.5 text-indigo-500" />
+              Documents ({initialDocuments.length})
+            </button>
           </div>
         </div>
 
@@ -252,6 +270,16 @@ export function ProjectDetailView({
         {activeTab === "resources" && (
           <ProjectResourcesView
             initialResources={initialResources}
+            projectId={project.id}
+            userId={userId}
+            userRole={userRole}
+          />
+        )}
+
+        {/* Tab 4: Documents */}
+        {activeTab === "documents" && (
+          <ProjectDocumentsView
+            initialDocuments={initialDocuments}
             projectId={project.id}
             userId={userId}
             userRole={userRole}

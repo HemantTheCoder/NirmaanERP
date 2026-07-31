@@ -342,6 +342,41 @@ export interface Database {
           created_at?: string;
         };
       };
+      project_documents: {
+        Row: {
+          id: string;
+          project_id: string;
+          file_name: string;
+          file_path: string;
+          file_type: string;
+          file_size: number;
+          category: DocumentCategory;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          file_name: string;
+          file_path: string;
+          file_type: string;
+          file_size: number;
+          category?: DocumentCategory;
+          uploaded_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          file_name?: string;
+          file_path?: string;
+          file_type?: string;
+          file_size?: number;
+          category?: DocumentCategory;
+          uploaded_by?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -353,9 +388,11 @@ export interface Database {
       notification_type: NotificationType;
       resource_type: ResourceType;
       resource_status: ResourceStatus;
+      document_category: DocumentCategory;
     };
   };
 }
 
 export type ResourceType = "material" | "equipment" | "labor";
 export type ResourceStatus = "requested" | "approved" | "in_use" | "released" | "rejected";
+export type DocumentCategory = "drawing" | "contract" | "report" | "photo" | "other";
