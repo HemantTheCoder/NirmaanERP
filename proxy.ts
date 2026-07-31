@@ -48,6 +48,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Deactivated user check
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("is_active")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && profile.is_active === false) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "deactivated");
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (user && (pathname === "/login" || pathname === "/signup")) {
     // Redirect already-authed users away from auth pages
     const url = request.nextUrl.clone();

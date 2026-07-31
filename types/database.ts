@@ -27,6 +27,7 @@ export interface Database {
           role: UserRole;
           avatar_url: string | null;
           created_at: string;
+          is_active: boolean;
         };
         Insert: {
           id: string;
@@ -35,6 +36,7 @@ export interface Database {
           role?: UserRole;
           avatar_url?: string | null;
           created_at?: string;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -43,6 +45,7 @@ export interface Database {
           role?: UserRole;
           avatar_url?: string | null;
           created_at?: string;
+          is_active?: boolean;
         };
       };
       projects: {
