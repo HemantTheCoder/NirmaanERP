@@ -269,39 +269,57 @@ export function ReportsView({ initialData }: ReportsViewProps) {
             </button>
           </div>
 
-          <div className="h-64 w-full flex items-center justify-center">
-            {data.projectStatus.every((s) => s.count === 0) ? (
-              <p className="text-xs text-muted-foreground">No projects found for selected filters.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.projectStatus}
-                    dataKey="count"
-                    nameKey="label"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    label={(entry: any) => `${entry.label}: ${entry.count}`}
-                  >
-                    {data.projectStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      borderColor: "hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                      fontSize: "12px",
-                      color: "hsl(var(--foreground))",
-                    }}
+          <div className="flex-1 flex flex-col justify-between">
+            <div className="h-52 w-full flex items-center justify-center">
+              {data.projectStatus.every((s) => s.count === 0) ? (
+                <p className="text-xs text-muted-foreground">No projects found for selected filters.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.projectStatus.filter((s) => s.count > 0)}
+                      dataKey="count"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={75}
+                      paddingAngle={4}
+                    >
+                      {data.projectStatus
+                        .filter((s) => s.count > 0)
+                        .map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(val: any, name: any) => [`${val} Projects`, name]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "0.5rem",
+                        fontSize: "12px",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Clean Custom Legend */}
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-3 border-t border-border">
+              {data.projectStatus.map((item) => (
+                <div key={item.status} className="flex items-center gap-1.5 text-xs">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color }}
                   />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+                  <span className="text-muted-foreground">{item.label}:</span>
+                  <span className="font-semibold text-foreground">{item.count}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
