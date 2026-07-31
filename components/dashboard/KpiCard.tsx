@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TrendingUp, TrendingDown, CheckCircle2, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,19 +53,20 @@ interface KpiCardProps {
   trend: TrendState;
   icon: LucideIcon;
   color: MetricColor;
+  href?: string;
 }
 
-export function KpiCard({ id, label, value, change, trend, icon: Icon, color }: KpiCardProps) {
+export function KpiCard({ id, label, value, change, trend, icon: Icon, color, href }: KpiCardProps) {
   const colors = colorMap[color];
   const trendInfo = trendMap[trend];
   const TrendIcon = trendInfo.icon;
 
-  return (
+  const content = (
     <div
       id={id}
       className={cn(
-        "rounded-xl p-5 border border-border bg-card shadow-2xs",
-        "hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between"
+        "rounded-xl p-5 border border-border bg-card shadow-2xs h-full",
+        "hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between cursor-pointer"
       )}
     >
       {/* Top Header: Icon + Trend Pill */}
@@ -87,10 +89,17 @@ export function KpiCard({ id, label, value, change, trend, icon: Icon, color }: 
         <p className="text-xs font-semibold text-foreground/90 mt-1.5 leading-tight">
           {label}
         </p>
-        <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/50">
-          {change}
+        <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+          <span>{change}</span>
+          {href && <span className="text-primary font-medium text-[11px]">View queue →</span>}
         </p>
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href} className="block h-full">{content}</Link>;
+  }
+
+  return content;
 }

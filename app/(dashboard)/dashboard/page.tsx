@@ -103,6 +103,7 @@ export default async function DashboardPage() {
       trend: pendingLeaves > 0 ? ("down" as const) : ("neutral" as const),
       icon: ClipboardList,
       color: "amber" as const,
+      href: canViewReports ? "/approvals" : undefined,
     },
   ];
 

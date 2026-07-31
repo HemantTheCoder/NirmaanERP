@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  CheckCircle2,
   Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Projects",      href: "/projects",   icon: FolderKanban },
   { label: "My Workspace",  href: "/workspace",  icon: Briefcase },
   { label: "Schedule",      href: "/schedule",   icon: CalendarDays },
+  { label: "Approvals",     href: "/approvals",  icon: CheckCircle2, allowedRoles: ["admin", "project_manager"] },
   { label: "Reports",       href: "/reports",    icon: BarChart3, allowedRoles: ["admin", "project_manager"] },
   { label: "Admin",         href: "/admin",      icon: ShieldCheck, allowedRoles: ["admin"] },
 ];

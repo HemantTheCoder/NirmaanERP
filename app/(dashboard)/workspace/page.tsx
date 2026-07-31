@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getMyTasks } from "@/lib/queries/tasks";
 import { getProjects } from "@/lib/queries/projects";
-import { KanbanBoard } from "@/components/workspace/KanbanBoard";
+import { getMyLeaves } from "@/lib/queries/leaves";
+import { WorkspaceView } from "@/components/workspace/WorkspaceView";
 
 export const metadata: Metadata = {
   title: "My Workspace",
-  description: "Personal task board and work item management.",
+  description: "Personal task board and leave request management.",
 };
 
 export const dynamic = "force-dynamic";
@@ -23,9 +24,10 @@ export default async function WorkspacePage() {
     redirect("/login");
   }
 
-  // Fetch my tasks & all projects for dropdown
-  const [tasks, projects] = await Promise.all([
+  // Fetch my tasks, my leaves, and projects list for modal dropdowns
+  const [tasks, leaves, projects] = await Promise.all([
     getMyTasks(supabase, user.id),
+    getMyLeaves(supabase, user.id),
     getProjects(supabase),
   ]);
 
@@ -35,19 +37,11 @@ export default async function WorkspacePage() {
   }));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">My Workspace</h2>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Drag and drop tasks across columns to update status in real time.
-        </p>
-      </div>
-
-      <KanbanBoard
-        initialTasks={tasks}
-        projects={projectOptions}
-        userId={user.id}
-      />
-    </div>
+    <WorkspaceView
+      initialTasks={tasks}
+      initialLeaves={leaves}
+      projects={projectOptions}
+      userId={user.id}
+    />
   );
 }

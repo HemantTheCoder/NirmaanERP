@@ -160,6 +160,7 @@ export interface Database {
           status: "pending" | "approved" | "rejected";
           reason: string | null;
           approved_by: string | null;
+          rejection_reason: string | null;
           created_at: string;
         };
         Insert: {
@@ -171,6 +172,7 @@ export interface Database {
           status?: "pending" | "approved" | "rejected";
           reason?: string | null;
           approved_by?: string | null;
+          rejection_reason?: string | null;
           created_at?: string;
         };
         Update: {
@@ -182,6 +184,7 @@ export interface Database {
           status?: "pending" | "approved" | "rejected";
           reason?: string | null;
           approved_by?: string | null;
+          rejection_reason?: string | null;
           created_at?: string;
         };
       };
