@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectsWithProgress } from "@/lib/queries/projects";
 import { getUpcomingMeetings } from "@/lib/queries/meetings";
@@ -63,6 +64,11 @@ export default async function DashboardPage() {
         meetings={upcomingMeetings}
       />
     );
+  }
+
+  // ── CONTRACTOR ROLE ROUTING ─────────────────────────────────────────────────
+  if (profile?.role === "contractor") {
+    redirect("/tenders");
   }
 
   const canViewReports = profile?.role === "admin" || profile?.role === "project_manager";

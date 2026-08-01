@@ -16,6 +16,7 @@ import {
   Building2,
   AlertCircle,
   ShieldAlert,
+  Gavel,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard",       href: "/dashboard",   icon: LayoutDashboard },
   { label: "Projects",        href: "/projects",    icon: FolderKanban },
   { label: "My Workspace",    href: "/workspace",   icon: Briefcase },
+  { label: "Tenders & Bids",  href: "/tenders",     icon: Gavel, allowedRoles: ["admin", "project_manager"] },
   { label: "Schedule",        href: "/schedule",    icon: CalendarDays },
   { label: "Safety Reports",  href: "/safety",      icon: ShieldAlert },
   { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
@@ -78,8 +80,15 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
     { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
   ];
 
+  const CONTRACTOR_NAV_ITEMS: NavItem[] = [
+    { label: "Tenders & Bids",  href: "/tenders",     icon: Gavel },
+    { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
+  ];
+
   const visibleNav = user.role === "client"
     ? CLIENT_NAV_ITEMS
+    : user.role === "contractor"
+    ? CONTRACTOR_NAV_ITEMS
     : NAV_ITEMS.filter(
         (item) => !item.allowedRoles || item.allowedRoles.includes(user.role)
       );
