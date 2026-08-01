@@ -45,6 +45,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   project_manager: "Project Manager",
   site_staff:      "Site Staff",
   client:          "Client",
+  contractor:      "Contractor",
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
@@ -52,6 +53,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
   project_manager: "bg-indigo-500/20 text-indigo-300",
   site_staff:      "bg-emerald-500/20 text-emerald-300",
   client:          "bg-amber-500/20 text-amber-300",
+  contractor:      "bg-violet-500/20 text-violet-300",
 };
 
 interface SidebarProps {

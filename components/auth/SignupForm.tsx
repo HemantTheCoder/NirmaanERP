@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Loader2, Mail, Lock, User, ChevronDown, Eye, EyeOff } from "lucide-react";
 import type { UserRole } from "@/types/database";
 
-const SIGNUP_ROLES: { value: Exclude<UserRole, "admin">; label: string }[] = [
+const SIGNUP_ROLES: { value: Exclude<UserRole, "admin" | "contractor">; label: string }[] = [
   { value: "project_manager", label: "Project Manager" },
   { value: "site_staff", label: "Site Staff" },
   { value: "client", label: "Client" },
@@ -19,7 +19,7 @@ export function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Exclude<UserRole, "admin">>("project_manager");
+  const [role, setRole] = useState<Exclude<UserRole, "admin" | "contractor">>("project_manager");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +146,7 @@ export function SignupForm() {
           <select
             id="signup-role"
             value={role}
-            onChange={(e) => setRole(e.target.value as Exclude<UserRole, "admin">)}
+            onChange={(e) => setRole(e.target.value as Exclude<UserRole, "admin" | "contractor">)}
             className="w-full pl-4 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none cursor-pointer"
           >
             {SIGNUP_ROLES.map((r) => (

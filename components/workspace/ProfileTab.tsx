@@ -23,6 +23,7 @@ const ROLE_BADGES: Record<UserRole, { label: string; bg: string; text: string }>
   project_manager: { label: "Project Manager",    bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-800 dark:text-indigo-300" },
   site_staff:      { label: "Site Staff / Engineer", bg: "bg-amber-100 dark:bg-amber-950/60",  text: "text-amber-800 dark:text-amber-300" },
   client:          { label: "Client Observer",     bg: "bg-emerald-100 dark:bg-emerald-950/60",text: "text-emerald-800 dark:text-emerald-300" },
+  contractor:      { label: "Bidding Contractor",  bg: "bg-violet-100 dark:bg-violet-950/60",  text: "text-violet-800 dark:text-violet-300" },
 };
 
 export function ProfileTab({ user }: ProfileTabProps) {

@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "project_manager" | "site_staff" | "client";
+export type UserRole = "admin" | "project_manager" | "site_staff" | "client" | "contractor";
 export type LocationType = "on_site" | "virtual";
 export type MeetingStatus = "scheduled" | "completed" | "cancelled";
 export type RsvpStatus = "pending" | "accepted" | "declined";
@@ -9,6 +9,8 @@ export type NotificationType =
   | "approval_needed"
   | "safety"
   | "grievance";
+export type TenderStatus = "draft" | "published" | "closed" | "awarded" | "cancelled";
+export type BidStatus = "submitted" | "under_review" | "shortlisted" | "awarded" | "rejected";
 
 export type Json =
   | string

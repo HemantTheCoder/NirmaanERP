@@ -39,6 +39,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string; bg: string; text: string }
   { value: "project_manager", label: "Project Manager", bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-800 dark:text-indigo-300" },
   { value: "site_staff",      label: "Site Staff",      bg: "bg-emerald-100 dark:bg-emerald-950/60",text: "text-emerald-800 dark:text-emerald-300" },
   { value: "client",          label: "Client",          bg: "bg-amber-100 dark:bg-amber-950/60",   text: "text-amber-800 dark:text-amber-300" },
+  { value: "contractor",      label: "Contractor",      bg: "bg-violet-100 dark:bg-violet-950/60", text: "text-violet-800 dark:text-violet-300" },
 ];
 
 export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: UsersTabProps) {
