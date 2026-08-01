@@ -41,6 +41,8 @@ async function verifyAdminCaller() {
   return { authorized: true, callerId: user.id };
 }
 
+import { checkRateLimit } from "@/lib/rate-limit";
+
 /**
  * POST /api/admin/users — Create / Invite new user
  */
@@ -49,6 +51,14 @@ export async function POST(req: Request) {
     const authCheck = await verifyAdminCaller();
     if (!authCheck.authorized) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    }
+
+    const rateCheck = checkRateLimit(`admin-invite:${authCheck.callerId}`, 10, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Too many user invitations created in a short window. Try again later." },
+        { status: 429 }
+      );
     }
 
     const body = await req.json();

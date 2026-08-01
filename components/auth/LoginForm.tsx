@@ -15,14 +15,22 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [failedAttempts, setFailedAttempts] = useState(0);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (failedAttempts >= 5) {
+      setError("Too many failed login attempts. Please wait 15 minutes before trying again.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      setFailedAttempts((prev) => prev + 1);
       setError(error.message);
       setLoading(false);
       return;
