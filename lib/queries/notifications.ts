@@ -5,7 +5,9 @@ export type NotificationType =
   | "task_assigned"
   | "meeting_invite"
   | "status_change"
-  | "approval_needed";
+  | "approval_needed"
+  | "safety"
+  | "grievance";
 
 export interface AppNotification {
   id: string;

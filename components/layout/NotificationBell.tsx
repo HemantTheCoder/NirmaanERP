@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCheck, CalendarDays, CheckSquare, RefreshCw, ClipboardList } from "lucide-react";
+import { Bell, CheckCheck, CalendarDays, CheckSquare, RefreshCw, ClipboardList, ShieldAlert, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getNotifications, markNotificationRead, markAllRead, type AppNotification, type NotificationType } from "@/lib/queries/notifications";
 import { formatRelativeTime, cn } from "@/lib/utils";
@@ -30,6 +30,16 @@ const TYPE_CONFIG: Record<
   },
   approval_needed: {
     icon: ClipboardList,
+    bg: "bg-amber-100 dark:bg-amber-950/60",
+    iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  safety: {
+    icon: ShieldAlert,
+    bg: "bg-rose-100 dark:bg-rose-950/60",
+    iconColor: "text-rose-600 dark:text-rose-400",
+  },
+  grievance: {
+    icon: AlertTriangle,
     bg: "bg-amber-100 dark:bg-amber-950/60",
     iconColor: "text-amber-600 dark:text-amber-400",
   },
