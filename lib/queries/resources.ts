@@ -68,6 +68,12 @@ export async function requestResource(
     return { success: false, error: "Quantity must be greater than 0." };
   }
 
+  let currentUserId = payload.requested_by;
+  if (!currentUserId) {
+    const { data: userData } = await supabase.auth.getUser();
+    currentUserId = userData.user?.id || "";
+  }
+
   const { data, error } = await (supabase.from("resource_allocations") as any)
     .insert({
       project_id: payload.project_id,
@@ -76,7 +82,7 @@ export async function requestResource(
       quantity: payload.quantity,
       unit: payload.unit,
       status: "requested",
-      requested_by: payload.requested_by,
+      requested_by: currentUserId,
       notes: payload.notes || null,
     })
     .select(`
