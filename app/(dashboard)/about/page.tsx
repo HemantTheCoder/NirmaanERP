@@ -102,7 +102,7 @@ export default function AboutPage() {
 
       {/* Core Platform Capabilities Grid */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
           <Cpu className="w-5 h-5 text-indigo-400" />
           Core Platform Capabilities
         </h2>
@@ -110,13 +110,13 @@ export default function AboutPage() {
           {MODULES.map((m) => (
             <div
               key={m.title}
-              className="bg-slate-900/50 border border-white/5 hover:border-indigo-500/30 rounded-xl p-5 transition-all duration-200"
+              className="bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 rounded-xl p-5 transition-all duration-200 shadow-md shadow-black/20"
             >
-              <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 mb-3.5 shadow-sm">
                 <m.icon className="w-5 h-5" />
               </div>
-              <h3 className="text-white font-semibold text-sm mb-1">{m.title}</h3>
-              <p className="text-slate-400 text-xs leading-relaxed">{m.desc}</p>
+              <h3 className="text-white font-bold text-sm tracking-tight mb-1.5">{m.title}</h3>
+              <p className="text-slate-200 text-xs leading-relaxed font-normal">{m.desc}</p>
             </div>
           ))}
         </div>
@@ -124,22 +124,22 @@ export default function AboutPage() {
 
       {/* Built With Tech Stack */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
           <Layers className="w-5 h-5 text-indigo-400" />
           Built With
         </h2>
-        <div className="bg-slate-900/50 border border-white/5 rounded-xl p-6">
+        <div className="bg-slate-900/90 border border-white/10 rounded-xl p-6 shadow-md shadow-black/20">
           <div className="flex flex-wrap gap-3">
             {TECH_STACK.map((tech) => (
               <div
                 key={tech.name}
-                className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-lg px-3.5 py-2 hover:bg-white/10 transition-colors"
               >
-                <span className="text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">
+                <span className="text-xs font-bold text-indigo-300 bg-indigo-500/25 px-2 py-0.5 rounded border border-indigo-500/40">
                   {tech.category}
                 </span>
-                <span className="text-sm font-medium text-white">{tech.name}</span>
-                <span className="text-xs text-slate-400">— {tech.desc}</span>
+                <span className="text-sm font-bold text-white">{tech.name}</span>
+                <span className="text-xs text-slate-300 font-medium">— {tech.desc}</span>
               </div>
             ))}
           </div>
@@ -148,7 +148,7 @@ export default function AboutPage() {
 
       {/* Developed By Section */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
           <GraduationCap className="w-5 h-5 text-indigo-400" />
           Developed By
         </h2>
@@ -156,24 +156,24 @@ export default function AboutPage() {
           {DEVELOPERS.map((dev) => (
             <div
               key={dev.name}
-              className="bg-slate-900/50 border border-white/10 hover:border-indigo-500/40 rounded-xl p-6 flex flex-col justify-between space-y-4 transition-all duration-200 shadow-lg"
+              className="bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 rounded-xl p-6 flex flex-col justify-between space-y-4 transition-all duration-200 shadow-md shadow-black/20"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-white">{dev.name}</h3>
-                  <p className="text-xs text-indigo-300 font-medium">{dev.role}</p>
+                  <h3 className="text-xl font-extrabold text-white tracking-tight">{dev.name}</h3>
+                  <p className="text-xs text-indigo-300 font-semibold">{dev.role}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 shadow-sm">
                   <LinkedInIcon className="w-5 h-5" />
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-white/5">
+              <div className="pt-2 border-t border-white/10">
                 <a
                   href={dev.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs rounded-lg transition-all shadow-md shadow-blue-500/20"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition-all shadow-md shadow-blue-500/20"
                 >
                   <LinkedInIcon className="w-4 h-4" />
                   Connect on LinkedIn
@@ -186,11 +186,11 @@ export default function AboutPage() {
 
       {/* Roles & Capabilities Accordion Section */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
           <UserCheck className="w-5 h-5 text-indigo-400" />
           Roles & Capabilities Overview
         </h2>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-300 font-medium">
           Nirmaan ERP enforces fine-grained access control boundaries across 5 specialized system roles. Click any role below to view detailed capabilities and permissions.
         </p>
 
@@ -203,8 +203,8 @@ export default function AboutPage() {
               <div
                 key={r.id}
                 className={cn(
-                  "border rounded-xl transition-all duration-200 overflow-hidden bg-slate-900/50",
-                  isOpen ? "border-indigo-500/50 shadow-lg shadow-indigo-500/5" : "border-white/10 hover:border-white/20"
+                  "border rounded-xl transition-all duration-200 overflow-hidden bg-slate-900/90 shadow-md shadow-black/20",
+                  isOpen ? "border-indigo-500/60 shadow-lg shadow-indigo-500/10" : "border-white/10 hover:border-white/20"
                 )}
               >
                 {/* Accordion Header */}
@@ -213,37 +213,37 @@ export default function AboutPage() {
                   onClick={() => toggleAccordion(r.id)}
                   className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-white/5 transition-colors"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0 shadow-sm">
                       <IconComp className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-bold text-white">{r.title}</h3>
+                        <h3 className="text-base font-extrabold text-white tracking-tight">{r.title}</h3>
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider", r.badgeStyle)}>
                           {r.badge}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">{r.summary}</p>
+                      <p className="text-xs text-slate-300 truncate mt-0.5 font-normal">{r.summary}</p>
                     </div>
                   </div>
 
-                  <div className="text-slate-400 hover:text-white transition-colors shrink-0">
-                    {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  <div className="text-slate-300 hover:text-white transition-colors shrink-0">
+                    {isOpen ? <ChevronUp className="w-5 h-5 text-indigo-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                   </div>
                 </button>
 
                 {/* Accordion Content */}
                 {isOpen && (
-                  <div className="px-6 pb-5 pt-2 border-t border-white/5 bg-slate-950/40 space-y-3">
-                    <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+                  <div className="px-6 pb-5 pt-3 border-t border-white/10 bg-slate-950/60 space-y-3">
+                    <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
                       Authorized Capabilities & System Permissions:
                     </p>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300">
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-200">
                       {r.capabilities.map((cap, i) => (
-                        <li key={i} className="flex items-start gap-2 bg-white/5 border border-white/5 rounded-lg p-2.5">
+                        <li key={i} className="flex items-start gap-2.5 bg-white/5 border border-white/10 rounded-lg p-3">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          <span className="leading-relaxed">{cap}</span>
+                          <span className="leading-relaxed font-medium">{cap}</span>
                         </li>
                       ))}
                     </ul>
