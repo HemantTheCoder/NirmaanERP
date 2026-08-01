@@ -11,8 +11,10 @@ export interface ProjectWithManager {
   start_date: string | null;
   end_date: string | null;
   manager_id: string | null;
+  client_id: string | null;
   created_at: string;
   manager_name?: string | null;
+  client_name?: string | null;
 }
 
 export interface ProjectProgressData {
@@ -33,8 +35,14 @@ export interface ProjectManagerOption {
   role: UserRole;
 }
 
+export interface ClientOption {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
+
 /**
- * Fetch all projects with manager's full name
+ * Fetch all projects with manager's and client's full name
  */
 export async function getProjects(
   supabase: SupabaseClient<Database>
@@ -44,6 +52,10 @@ export async function getProjects(
     .select(`
       *,
       users!projects_manager_id_fkey (
+        full_name,
+        email
+      ),
+      client:users!projects_client_id_fkey (
         full_name,
         email
       )
@@ -63,8 +75,10 @@ export async function getProjects(
     start_date: p.start_date,
     end_date: p.end_date,
     manager_id: p.manager_id,
+    client_id: p.client_id || null,
     created_at: p.created_at,
     manager_name: p.users?.full_name || p.users?.email || null,
+    client_name: p.client?.full_name || p.client?.email || null,
   }));
 }
 
@@ -80,6 +94,10 @@ export async function getProjectById(
     .select(`
       *,
       users!projects_manager_id_fkey (
+        full_name,
+        email
+      ),
+      client:users!projects_client_id_fkey (
         full_name,
         email
       )
@@ -107,6 +125,7 @@ export async function getProjectById(
     project: {
       ...(project as any),
       manager_name: (project as any).users?.full_name || (project as any).users?.email || null,
+      client_name: (project as any).client?.full_name || (project as any).client?.email || null,
     },
     tasks: (tasks || []).map((t: any) => ({
       ...t,
@@ -132,6 +151,26 @@ export async function getProjectManagers(
   }
 
   return (data || []) as ProjectManagerOption[];
+}
+
+/**
+ * Fetch eligible client accounts (users with role client)
+ */
+export async function getClientOptions(
+  supabase: SupabaseClient<Database>
+): Promise<ClientOption[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, full_name, email")
+    .eq("role", "client")
+    .order("full_name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching client options:", error);
+    return [];
+  }
+
+  return (data || []) as ClientOption[];
 }
 
 /**
@@ -184,6 +223,7 @@ export async function createProject(
     start_date?: string;
     end_date?: string;
     manager_id?: string;
+    client_id?: string;
   }
 ) {
   const { data, error } = await (supabase.from("projects") as any).insert(payload).select().single();
@@ -203,6 +243,7 @@ export async function updateProject(
     start_date: string | null;
     end_date: string | null;
     manager_id: string | null;
+    client_id: string | null;
   }>
 ) {
   const { data, error } = await (supabase.from("projects") as any)

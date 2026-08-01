@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
-import type { ProjectWithManager, ProjectManagerOption, ProjectStatus } from "@/lib/queries/projects";
+import type { ProjectWithManager, ProjectManagerOption, ClientOption, ProjectStatus } from "@/lib/queries/projects";
 
 interface ProjectFormModalProps {
   isOpen: boolean;
@@ -14,9 +14,11 @@ interface ProjectFormModalProps {
     start_date: string;
     end_date: string;
     manager_id: string;
+    client_id: string;
   }) => Promise<void>;
   initialData?: ProjectWithManager | null;
   managers: ProjectManagerOption[];
+  clients?: ClientOption[];
   isSubmitting?: boolean;
 }
 
@@ -26,6 +28,7 @@ export function ProjectFormModal({
   onSubmit,
   initialData,
   managers,
+  clients = [],
   isSubmitting = false,
 }: ProjectFormModalProps) {
   const [name, setName] = useState("");
@@ -34,6 +37,7 @@ export function ProjectFormModal({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [managerId, setManagerId] = useState("");
+  const [clientId, setClientId] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -44,6 +48,7 @@ export function ProjectFormModal({
       setStartDate(initialData.start_date || "");
       setEndDate(initialData.end_date || "");
       setManagerId(initialData.manager_id || "");
+      setClientId(initialData.client_id || "");
     } else {
       setName("");
       setDescription("");
@@ -51,6 +56,7 @@ export function ProjectFormModal({
       setStartDate("");
       setEndDate("");
       setManagerId("");
+      setClientId("");
     }
     setError("");
   }, [initialData, isOpen]);
@@ -73,6 +79,7 @@ export function ProjectFormModal({
         start_date: startDate,
         end_date: endDate,
         manager_id: managerId,
+        client_id: clientId,
       });
       onClose();
     } catch (err: any) {
@@ -132,7 +139,7 @@ export function ProjectFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Status
@@ -140,7 +147,7 @@ export function ProjectFormModal({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-2.5 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="planning">Planning</option>
                 <option value="active">Active</option>
@@ -156,12 +163,30 @@ export function ProjectFormModal({
               <select
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-2.5 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select Manager</option>
                 {managers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name || m.email} ({m.role})
+                    {m.full_name || m.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Assigned Client
+              </label>
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full px-2.5 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">No Client Linked</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.full_name || c.email}
                   </option>
                 ))}
               </select>

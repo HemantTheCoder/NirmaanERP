@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ShieldCheck, Users, Lock, Activity } from "lucide-react";
+import { ShieldCheck, Users, Lock, Activity, LayoutDashboard } from "lucide-react";
 import { UsersTab } from "@/components/admin/UsersTab";
 import { RolesTab } from "@/components/admin/RolesTab";
 import { SessionsTab } from "@/components/admin/SessionsTab";
+import { OverviewTab } from "@/components/admin/OverviewTab";
 import { createClient } from "@/lib/supabase/client";
-import { getAllAdminUsers, type AdminUserItem } from "@/lib/queries/admin";
+import { getAllAdminUsers, type AdminUserItem, type AdminOverviewData } from "@/lib/queries/admin";
 import { cn } from "@/lib/utils";
 
 interface AdminViewProps {
   initialUsers: AdminUserItem[];
+  overviewData: AdminOverviewData;
   currentUserId: string;
 }
 
-export function AdminView({ initialUsers, currentUserId }: AdminViewProps) {
+export function AdminView({ initialUsers, overviewData, currentUserId }: AdminViewProps) {
   const supabase = createClient();
   const [users, setUsers] = useState<AdminUserItem[]>(initialUsers);
-  const [activeTab, setActiveTab] = useState<"users" | "roles" | "sessions">("users");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "roles" | "sessions">("overview");
 
   const refreshUsers = useCallback(async () => {
     const updated = await getAllAdminUsers(supabase);
@@ -39,6 +41,19 @@ export function AdminView({ initialUsers, currentUserId }: AdminViewProps) {
 
       {/* Tabs Switcher */}
       <div className="flex border-b border-border gap-2">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all",
+            activeTab === "overview"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          System Overview
+        </button>
+
         <button
           onClick={() => setActiveTab("users")}
           className={cn(
@@ -84,6 +99,12 @@ export function AdminView({ initialUsers, currentUserId }: AdminViewProps) {
 
       {/* Tab Contents */}
       <div>
+        {activeTab === "overview" && (
+          <OverviewTab
+            overviewData={overviewData}
+            onNavigateToUsers={() => setActiveTab("users")}
+          />
+        )}
         {activeTab === "users" && (
           <UsersTab
             initialUsers={users}

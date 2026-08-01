@@ -170,7 +170,7 @@ export async function toggleUserActive(
 }
 
 /**
- * Check if a user has orphan references across all 7 relational tables
+ * Check if a user has orphan references across all 11 relational tables
  */
 export async function checkUserOrphanStatus(
   supabase: SupabaseClient<Database>,
@@ -192,29 +192,56 @@ export async function checkUserOrphanStatus(
 
   const [
     { count: taskCount },
-    { count: projectCount },
+    { count: projectManagerCount },
+    { count: projectClientCount },
     { count: organizedMeetingCount },
     { count: invitedMeetingCount },
     { count: notificationCount },
     { count: attendanceCount },
-    { count: leaveCount },
+    { count: leaveUserCount },
+    { count: leaveApproverCount },
+    { count: resourceRequesterCount },
+    { count: resourceApproverCount },
+    { count: docCount },
+    { count: safetyReporterCount },
+    { count: safetyAssigneeCount },
+    { count: grievanceSubmitterCount },
+    { count: grievanceAssigneeCount },
   ] = await Promise.all([
     supabase.from("tasks").select("id", { count: "exact", head: true }).eq("assignee_id", targetUserId),
     supabase.from("projects").select("id", { count: "exact", head: true }).eq("manager_id", targetUserId),
+    supabase.from("projects").select("id", { count: "exact", head: true }).eq("client_id", targetUserId),
     supabase.from("meetings").select("id", { count: "exact", head: true }).eq("organizer_id", targetUserId),
     supabase.from("meeting_attendees").select("meeting_id", { count: "exact", head: true }).eq("user_id", targetUserId),
     supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
     supabase.from("attendance").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
     supabase.from("leaves").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
+    supabase.from("leaves").select("id", { count: "exact", head: true }).eq("approved_by", targetUserId),
+    supabase.from("resource_allocations").select("id", { count: "exact", head: true }).eq("requested_by", targetUserId),
+    supabase.from("resource_allocations").select("id", { count: "exact", head: true }).eq("approved_by", targetUserId),
+    supabase.from("project_documents").select("id", { count: "exact", head: true }).eq("uploaded_by", targetUserId),
+    supabase.from("safety_incidents").select("id", { count: "exact", head: true }).eq("reported_by", targetUserId),
+    supabase.from("safety_incidents").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
+    supabase.from("grievances").select("id", { count: "exact", head: true }).eq("submitted_by", targetUserId),
+    supabase.from("grievances").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
   ]);
 
   if ((taskCount ?? 0) > 0) reasons.push(`Assigned to ${taskCount} task(s)`);
-  if ((projectCount ?? 0) > 0) reasons.push(`Manager of ${projectCount} project(s)`);
+  if ((projectManagerCount ?? 0) > 0) reasons.push(`Manager of ${projectManagerCount} project(s)`);
+  if ((projectClientCount ?? 0) > 0) reasons.push(`Linked client on ${projectClientCount} project(s)`);
   if ((organizedMeetingCount ?? 0) > 0) reasons.push(`Organizer of ${organizedMeetingCount} meeting(s)`);
   if ((invitedMeetingCount ?? 0) > 0) reasons.push(`Invited attendee in ${invitedMeetingCount} meeting(s)`);
   if ((notificationCount ?? 0) > 0) reasons.push(`Has ${notificationCount} notification record(s)`);
   if ((attendanceCount ?? 0) > 0) reasons.push(`Has ${attendanceCount} attendance record(s)`);
-  if ((leaveCount ?? 0) > 0) reasons.push(`Has ${leaveCount} leave request record(s)`);
+  if ((leaveUserCount ?? 0) > 0) reasons.push(`Submitted ${leaveUserCount} leave request(s)`);
+  if ((leaveApproverCount ?? 0) > 0) reasons.push(`Approver on ${leaveApproverCount} leave request(s)`);
+  if ((resourceRequesterCount ?? 0) > 0) reasons.push(`Requested ${resourceRequesterCount} resource allocation(s)`);
+  if ((resourceApproverCount ?? 0) > 0) reasons.push(`Approver on ${resourceApproverCount} resource allocation(s)`);
+  if ((docCount ?? 0) > 0) reasons.push(`Uploaded ${docCount} project document(s)`);
+  if ((safetyReporterCount ?? 0) > 0) reasons.push(`Reported ${safetyReporterCount} safety incident(s)`);
+  if ((safetyAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${safetyAssigneeCount} safety incident(s)`);
+  if ((grievanceSubmitterCount ?? 0) > 0) reasons.push(`Submitted ${grievanceSubmitterCount} grievance(s)`);
+  if ((grievanceAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${grievanceAssigneeCount} grievance(s)`);
 
   return {
     canDelete: reasons.length === 0,
@@ -222,3 +249,49 @@ export async function checkUserOrphanStatus(
     isLastAdmin,
   };
 }
+
+export interface AdminOverviewData {
+  openGrievances: number;
+  openSafetyIncidents: number;
+  criticalSafetyIncidents: number;
+  pendingLeaves: number;
+  pendingResourceRequests: number;
+  activeProjects: number;
+  totalUsers: number;
+}
+
+/**
+ * Fetch cross-module pending/open items count for Admin System Overview
+ */
+export async function getAdminOverviewData(
+  supabase: SupabaseClient<Database>
+): Promise<AdminOverviewData> {
+  const [
+    { count: openGrievances },
+    { count: openSafetyIncidents },
+    { count: criticalSafetyIncidents },
+    { count: pendingLeaves },
+    { count: pendingResourceRequests },
+    { count: activeProjects },
+    { count: totalUsers },
+  ] = await Promise.all([
+    supabase.from("grievances").select("id", { count: "exact", head: true }).neq("status", "resolved"),
+    supabase.from("safety_incidents").select("id", { count: "exact", head: true }).neq("status", "resolved"),
+    supabase.from("safety_incidents").select("id", { count: "exact", head: true }).eq("severity", "critical").neq("status", "resolved"),
+    supabase.from("leaves").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("resource_allocations").select("id", { count: "exact", head: true }).eq("status", "requested"),
+    supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("users").select("id", { count: "exact", head: true }),
+  ]);
+
+  return {
+    openGrievances: openGrievances ?? 0,
+    openSafetyIncidents: openSafetyIncidents ?? 0,
+    criticalSafetyIncidents: criticalSafetyIncidents ?? 0,
+    pendingLeaves: pendingLeaves ?? 0,
+    pendingResourceRequests: pendingResourceRequests ?? 0,
+    activeProjects: activeProjects ?? 0,
+    totalUsers: totalUsers ?? 0,
+  };
+}
+

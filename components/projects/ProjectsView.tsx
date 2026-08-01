@@ -10,6 +10,7 @@ import {
   deleteProject,
   type ProjectWithManager,
   type ProjectManagerOption,
+  type ClientOption,
   type ProjectStatus,
 } from "@/lib/queries/projects";
 import { StatusBadge } from "./StatusBadge";
@@ -22,6 +23,7 @@ import {
   MoreVertical,
   Calendar,
   UserCheck,
+  User,
   FolderKanban,
   Edit2,
   Trash2,
@@ -32,12 +34,14 @@ import type { UserRole } from "@/types/database";
 interface ProjectsViewProps {
   initialProjects: ProjectWithManager[];
   managers: ProjectManagerOption[];
+  clients?: ClientOption[];
   userRole: UserRole;
 }
 
 export function ProjectsView({
   initialProjects,
   managers,
+  clients = [],
   userRole,
 }: ProjectsViewProps) {
   const router = useRouter();
@@ -65,7 +69,8 @@ export function ProjectsView({
       const matchesSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.description && p.description.toLowerCase().includes(search.toLowerCase())) ||
-        (p.manager_name && p.manager_name.toLowerCase().includes(search.toLowerCase()));
+        (p.manager_name && p.manager_name.toLowerCase().includes(search.toLowerCase())) ||
+        (p.client_name && p.client_name.toLowerCase().includes(search.toLowerCase()));
 
       const matchesStatus = filterStatus === "all" || p.status === filterStatus;
       return matchesSearch && matchesStatus;
@@ -94,6 +99,7 @@ export function ProjectsView({
     start_date: string;
     end_date: string;
     manager_id: string;
+    client_id: string;
   }) => {
     setIsSubmitting(true);
     try {
@@ -105,6 +111,7 @@ export function ProjectsView({
           start_date: formData.start_date || null,
           end_date: formData.end_date || null,
           manager_id: formData.manager_id || null,
+          client_id: formData.client_id || null,
         });
 
         if (error) throw error;
@@ -117,6 +124,8 @@ export function ProjectsView({
                   ...formData,
                   manager_name:
                     managers.find((m) => m.id === formData.manager_id)?.full_name || null,
+                  client_name:
+                    clients.find((c) => c.id === formData.client_id)?.full_name || null,
                 }
               : p
           )
@@ -129,6 +138,7 @@ export function ProjectsView({
           start_date: formData.start_date || undefined,
           end_date: formData.end_date || undefined,
           manager_id: formData.manager_id || undefined,
+          client_id: formData.client_id || undefined,
         });
 
         if (error) throw error;
@@ -137,6 +147,8 @@ export function ProjectsView({
             ...data,
             manager_name:
               managers.find((m) => m.id === formData.manager_id)?.full_name || null,
+            client_name:
+              clients.find((c) => c.id === formData.client_id)?.full_name || null,
           };
           setProjects((prev) => [newProj, ...prev]);
         }
@@ -172,7 +184,7 @@ export function ProjectsView({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects by name, manager..."
+            placeholder="Search projects by name, manager, client..."
             className="w-full pl-9 pr-4 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -331,15 +343,25 @@ export function ProjectsView({
 
               {/* Footer info */}
               <div className="mt-5 pt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="truncate font-medium text-foreground/80">
-                    {project.manager_name || "Unassigned"}
-                  </span>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="truncate font-medium text-foreground/80">
+                      PM: {project.manager_name || "Unassigned"}
+                    </span>
+                  </div>
+                  {project.client_name && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+                      <User className="w-3.5 h-3.5" />
+                      <span className="truncate font-medium">
+                        Client: {project.client_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {project.end_date && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 self-end">
                     <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{project.end_date}</span>
                   </div>
@@ -357,6 +379,7 @@ export function ProjectsView({
         onSubmit={handleFormSubmit}
         initialData={editingProject}
         managers={managers}
+        clients={clients}
         isSubmitting={isSubmitting}
       />
 

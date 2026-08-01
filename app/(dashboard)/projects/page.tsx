@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getProjects, getProjectManagers } from "@/lib/queries/projects";
+import { getProjects, getProjectManagers, getClientOptions } from "@/lib/queries/projects";
 import { ProjectsView } from "@/components/projects/ProjectsView";
 import type { UserRole } from "@/types/database";
 
@@ -32,10 +32,11 @@ export default async function ProjectsPage() {
     }
   }
 
-  // Fetch projects and project managers in parallel
-  const [projects, managers] = await Promise.all([
+  // Fetch projects, project managers, and client options in parallel
+  const [projects, managers, clients] = await Promise.all([
     getProjects(supabase),
     getProjectManagers(supabase),
+    getClientOptions(supabase),
   ]);
 
   return (
@@ -50,6 +51,7 @@ export default async function ProjectsPage() {
       <ProjectsView
         initialProjects={projects}
         managers={managers}
+        clients={clients}
         userRole={userRole}
       />
     </div>

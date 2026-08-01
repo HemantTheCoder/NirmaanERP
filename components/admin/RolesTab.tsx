@@ -30,6 +30,29 @@ const PERMISSIONS_MATRIX: PermissionRow[] = [
   { module: "Schedule", action: "Update RSVP Status", admin: true, project_manager: true, site_staff: true, client: true },
   { module: "Schedule", action: "Edit Meeting Minutes & Notes", admin: true, project_manager: false, site_staff: false, client: false },
 
+  // Leaves Management
+  { module: "Leaves", action: "Submit Leave Request", admin: true, project_manager: true, site_staff: true, client: false },
+  { module: "Leaves", action: "Approve or Reject Leave Requests", admin: true, project_manager: true, site_staff: false, client: false },
+
+  // Resource Allocation
+  { module: "Resources", action: "Request Site Resource Allocation", admin: true, project_manager: true, site_staff: true, client: false },
+  { module: "Resources", action: "Approve & Dispatch Resource Requests", admin: true, project_manager: true, site_staff: false, client: false },
+
+  // Project Documents
+  { module: "Documents", action: "Upload Project Documents & Drawings", admin: true, project_manager: true, site_staff: true, client: false },
+  { module: "Documents", action: "Delete Project Documents", admin: true, project_manager: true, site_staff: false, client: false },
+
+  // Safety Incidents
+  { module: "Safety", action: "Report Safety Incident or Near Miss", admin: true, project_manager: true, site_staff: true, client: false },
+  { module: "Safety", action: "Resolve & Close Safety Incident Tickets", admin: true, project_manager: true, site_staff: false, client: false },
+
+  // Grievance Portal
+  { module: "Grievances", action: "File Grievance Ticket", admin: true, project_manager: true, site_staff: true, client: true },
+  { module: "Grievances", action: "Resolve & Update Grievance Status", admin: true, project_manager: true, site_staff: false, client: false },
+
+  // Client Portal
+  { module: "Client Portal", action: "Access Dedicated Client View & Sign-Off", admin: false, project_manager: false, site_staff: false, client: true },
+
   // Reports & Analytics
   { module: "Reports", action: "Access Reports & Analytics Page", admin: true, project_manager: true, site_staff: false, client: false },
   { module: "Reports", action: "Export CSV & PDF Reports", admin: true, project_manager: true, site_staff: false, client: false },
