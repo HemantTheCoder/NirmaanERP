@@ -1,13 +1,10 @@
 -- =============================================================================
--- Nirmaan ERP — Migration 0016: Tendering Schema & Contractor Role RLS Scoping
--- Adds 'contractor' role, tender_status & bid_status enums, tenders, bids,
--- tender_documents tables, storage bucket 'tender-documents', and strict
--- single-policy role-conditional RLS policies.
+-- Nirmaan ERP — Migration 0017: Tendering Schema, Tables & RLS Policies
+-- Creates tender_status & bid_status enums, tenders, bids, tender_documents,
+-- 'tender-documents' storage bucket, and role-conditional RLS policies.
 -- =============================================================================
 
--- ── 1. Role & Enums ──────────────────────────────────────────────────────────
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'contractor';
-
+-- ── 1. Enums ─────────────────────────────────────────────────────────────────
 DO $$ BEGIN
   CREATE TYPE tender_status AS ENUM ('draft', 'published', 'closed', 'awarded', 'cancelled');
 EXCEPTION WHEN duplicate_object THEN NULL;
