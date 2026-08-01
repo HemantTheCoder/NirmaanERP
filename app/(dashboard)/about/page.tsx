@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import {
   Building2,
   Layers,
@@ -9,7 +11,14 @@ import {
   HardHat,
   Cpu,
   GraduationCap,
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  CheckCircle2,
 } from "lucide-react";
+import { ROLE_DEFINITIONS, type RoleDefinition } from "@/lib/constants/roles";
+import { cn } from "@/lib/utils";
 
 function LinkedInIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -19,12 +28,17 @@ function LinkedInIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-export const metadata: Metadata = {
-  title: "About | Nirmaan ERP",
-  description: "About Nirmaan ERP — Multi-project construction management platform",
+const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  ShieldCheck: ShieldCheck,
+  Briefcase: Briefcase,
+  HardHat: HardHat,
+  Building2: Building2,
+  Gavel: Gavel,
 };
 
 export default function AboutPage() {
+  const [openRole, setOpenRole] = useState<string | null>("admin");
+
   const TECH_STACK = [
     { name: "Next.js 16", desc: "React Framework & Turbopack", category: "Core" },
     { name: "Supabase", desc: "PostgreSQL, Auth & Storage", category: "Database" },
@@ -55,6 +69,10 @@ export default function AboutPage() {
       linkedin: "https://www.linkedin.com/in/dhvij-shah-511927339/",
     },
   ];
+
+  function toggleAccordion(id: string) {
+    setOpenRole((prev) => (prev === id ? null : id));
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
@@ -163,6 +181,77 @@ export default function AboutPage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Roles & Capabilities Accordion Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-indigo-400" />
+          Roles & Capabilities Overview
+        </h2>
+        <p className="text-xs text-slate-400">
+          Nirmaan ERP enforces fine-grained access control boundaries across 5 specialized system roles. Click any role below to view detailed capabilities and permissions.
+        </p>
+
+        <div className="space-y-3">
+          {ROLE_DEFINITIONS.map((r: RoleDefinition) => {
+            const IconComp = ROLE_ICONS[r.iconName] || ShieldCheck;
+            const isOpen = openRole === r.id;
+
+            return (
+              <div
+                key={r.id}
+                className={cn(
+                  "border rounded-xl transition-all duration-200 overflow-hidden bg-slate-900/50",
+                  isOpen ? "border-indigo-500/50 shadow-lg shadow-indigo-500/5" : "border-white/10 hover:border-white/20"
+                )}
+              >
+                {/* Accordion Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion(r.id)}
+                  className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                      <IconComp className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-bold text-white">{r.title}</h3>
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider", r.badgeStyle)}>
+                          {r.badge}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{r.summary}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-slate-400 hover:text-white transition-colors shrink-0">
+                    {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  </div>
+                </button>
+
+                {/* Accordion Content */}
+                {isOpen && (
+                  <div className="px-6 pb-5 pt-2 border-t border-white/5 bg-slate-950/40 space-y-3">
+                    <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+                      Authorized Capabilities & System Permissions:
+                    </p>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300">
+                      {r.capabilities.map((cap, i) => (
+                        <li key={i} className="flex items-start gap-2 bg-white/5 border border-white/5 rounded-lg p-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{cap}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
