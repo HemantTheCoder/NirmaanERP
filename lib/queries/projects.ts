@@ -43,7 +43,7 @@ export async function getProjects(
     .from("projects")
     .select(`
       *,
-      users (
+      users!projects_manager_id_fkey (
         full_name,
         email
       )
@@ -79,7 +79,7 @@ export async function getProjectById(
     .from("projects")
     .select(`
       *,
-      users (
+      users!projects_manager_id_fkey (
         full_name,
         email
       )

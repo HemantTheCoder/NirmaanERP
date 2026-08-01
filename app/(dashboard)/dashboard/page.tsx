@@ -10,6 +10,7 @@ import { getInUseResourceCount } from "@/lib/queries/resources";
 import { getClientProjects, getClientDocuments } from "@/lib/queries/client";
 import { ClientPortalView } from "@/components/client/ClientPortalView";
 import type { UserRole } from "@/types/database";
+import { getReportsData } from "@/lib/queries/reports";
 import {
   FolderKanban,
   CheckSquare,
@@ -17,6 +18,7 @@ import {
   ClipboardList,
   BarChart3,
   Package,
+  Clock,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -65,7 +67,7 @@ export default async function DashboardPage() {
 
   const canViewReports = profile?.role === "admin" || profile?.role === "project_manager";
 
-  // Run 6 parallel queries: 5 count queries + project progress + upcoming meetings
+  // Run 7 parallel queries: 5 count queries + project progress + upcoming meetings + reports KPIs
   const [
     { count: activeProjectsCount },
     { count: openTasksCount },
@@ -74,6 +76,7 @@ export default async function DashboardPage() {
     inUseResources,
     projectsProgress,
     upcomingMeetings,
+    reportsKpis,
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -91,6 +94,7 @@ export default async function DashboardPage() {
     getInUseResourceCount(supabase),
     getProjectsWithProgress(supabase),
     getUpcomingMeetings(supabase, 3),
+    getReportsData(supabase, { dateRange: "all" }),
   ]);
 
   const activeProjects = activeProjectsCount ?? 0;
@@ -145,6 +149,24 @@ export default async function DashboardPage() {
       color: "amber" as const,
       href: canViewReports ? "/approvals" : undefined,
     },
+    {
+      id: "kpi-on-time-rate",
+      label: "On-Time Completion",
+      value: `${reportsKpis.onTimeCompletion.rate}%`,
+      change:
+        reportsKpis.onTimeCompletion.totalCompletedWithDueDate > 0
+          ? `${reportsKpis.onTimeCompletion.onTimeCount} of ${reportsKpis.onTimeCompletion.totalCompletedWithDueDate} tasks on time`
+          : "No tasks with due dates yet",
+      trend:
+        reportsKpis.onTimeCompletion.rate >= 70
+          ? ("up" as const)
+          : reportsKpis.onTimeCompletion.rate >= 40
+          ? ("neutral" as const)
+          : ("down" as const),
+      icon: Clock,
+      color: "emerald" as const,
+      href: canViewReports ? "/reports" : undefined,
+    },
   ];
 
   return (
@@ -170,7 +192,7 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <section aria-label="Key performance indicators">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {KPI_DATA.map((kpi) => (
             <KpiCard key={kpi.id} {...kpi} />
           ))}

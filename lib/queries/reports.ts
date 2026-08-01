@@ -35,6 +35,27 @@ export interface ProjectOption {
   name: string;
 }
 
+export interface OnTimeCompletionRateData {
+  rate: number;
+  onTimeCount: number;
+  totalCompletedWithDueDate: number;
+}
+
+export interface PpcTrendItem {
+  weekLabel: string;
+  ppc: number;
+  dueCount: number;
+  completedOnTimeCount: number;
+}
+
+export interface ResourceUtilizationData {
+  utilizationPct: number;
+  inUseCount: number;
+  idleApprovedCount: number;
+  requestedCount: number;
+  totalActiveCount: number;
+}
+
 export interface ReportsAggregateData {
   projectStatus: ProjectStatusItem[];
   completionTrend: TaskCompletionTrendItem[];
@@ -42,6 +63,9 @@ export interface ReportsAggregateData {
   teamWorkload: TeamWorkloadItem[];
   projectProgress: ProjectProgressComparisonItem[];
   projectsList: ProjectOption[];
+  onTimeCompletion: OnTimeCompletionRateData;
+  ppcTrend: PpcTrendItem[];
+  resourceUtilization: ResourceUtilizationData;
 }
 
 const STATUS_COLOR_MAP: Record<string, { label: string; color: string }> = {
@@ -223,6 +247,98 @@ export async function getReportsData(
     };
   });
 
+  // ── 5. On-Time Task Completion Rate ─────────────────────────────────────────
+  const allTasksWithDueDateQuery = (supabase.from("tasks") as any)
+    .select("id, status, due_date, completed_at, updated_at, created_at, project_id")
+    .not("due_date", "is", null);
+
+  if (projectId) {
+    allTasksWithDueDateQuery.eq("project_id", projectId);
+  }
+
+  const { data: tasksWithDueDateRaw } = await allTasksWithDueDateQuery;
+  const tasksWithDueDate = tasksWithDueDateRaw || [];
+
+  const completedWithDueDate = tasksWithDueDate.filter((t: any) => t.status === "done");
+  const onTimeTasks = completedWithDueDate.filter((t: any) => {
+    const compDateStr = t.completed_at || t.updated_at || t.created_at;
+    if (!compDateStr || !t.due_date) return false;
+    return new Date(compDateStr).getTime() <= new Date(t.due_date).getTime() + 86400000; // end of due day
+  });
+
+  const onTimeCompletion: OnTimeCompletionRateData = {
+    rate: completedWithDueDate.length > 0 ? Math.round((onTimeTasks.length / completedWithDueDate.length) * 100) : 0,
+    onTimeCount: onTimeTasks.length,
+    totalCompletedWithDueDate: completedWithDueDate.length,
+  };
+
+  // ── 6. Percent Plan Complete (PPC - Last Planner System Weekly Trend) ─────────
+  // Uses the exact same weekly time windows (wStart -> wEnd) as completionTrend
+  const ppcTrend: PpcTrendItem[] = [];
+
+  for (let i = 0; i < numWeeks; i++) {
+    const wStart = new Date(startDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+    const wEnd = new Date(startDate.getTime() + (i + 1) * 7 * 24 * 60 * 60 * 1000);
+
+    const weekLabel = `${wStart.getDate()} ${wStart.toLocaleString("en-US", { month: "short" })}`;
+
+    // Tasks due in this specific week
+    const dueInWeek = tasksWithDueDate.filter((t: any) => {
+      if (!t.due_date) return false;
+      const dDate = new Date(t.due_date);
+      return dDate >= wStart && dDate < wEnd;
+    });
+
+    // Of tasks due this week, how many were completed in this same week or on time
+    const completedOnTimeInWeek = dueInWeek.filter((t: any) => {
+      if (t.status !== "done") return false;
+      const compDateStr = t.completed_at || t.updated_at || t.created_at;
+      if (!compDateStr) return false;
+      const cDate = new Date(compDateStr);
+      return cDate >= wStart && cDate < wEnd && cDate.getTime() <= new Date(t.due_date).getTime() + 86400000;
+    });
+
+    const ppcVal = dueInWeek.length > 0 ? Math.round((completedOnTimeInWeek.length / dueInWeek.length) * 100) : 0;
+
+    ppcTrend.push({
+      weekLabel,
+      ppc: ppcVal,
+      dueCount: dueInWeek.length,
+      completedOnTimeCount: completedOnTimeInWeek.length,
+    });
+  }
+
+  // ── 7. Resource Utilization Rate ─────────────────────────────────────────────
+  const resourceQuery = (supabase.from("resource_allocations") as any).select("id, status, quantity, project_id");
+  if (projectId) {
+    resourceQuery.eq("project_id", projectId);
+  }
+
+  const { data: resourceRaw } = await resourceQuery;
+  const resourceList = resourceRaw || [];
+
+  let inUseCount = 0;
+  let idleApprovedCount = 0;
+  let requestedCount = 0;
+
+  resourceList.forEach((r: any) => {
+    const q = Number(r.quantity) || 1;
+    if (r.status === "in_use") inUseCount += q;
+    else if (r.status === "approved") idleApprovedCount += q;
+    else if (r.status === "requested") requestedCount += q;
+  });
+
+  const totalActiveCount = inUseCount + idleApprovedCount + requestedCount;
+  const utilizationPct = totalActiveCount > 0 ? Math.round((inUseCount / totalActiveCount) * 100) : 0;
+
+  const resourceUtilization: ResourceUtilizationData = {
+    utilizationPct,
+    inUseCount,
+    idleApprovedCount,
+    requestedCount,
+    totalActiveCount,
+  };
+
   return {
     projectStatus,
     completionTrend,
@@ -230,5 +346,8 @@ export async function getReportsData(
     teamWorkload,
     projectProgress,
     projectsList,
+    onTimeCompletion,
+    ppcTrend,
+    resourceUtilization,
   };
 }

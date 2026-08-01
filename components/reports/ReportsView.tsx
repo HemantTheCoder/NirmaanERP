@@ -12,6 +12,9 @@ import {
   Users,
   CheckCircle2,
   Loader2,
+  Clock,
+  Target,
+  Cpu,
 } from "lucide-react";
 import {
   PieChart,
@@ -19,6 +22,8 @@ import {
   Cell,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -126,6 +131,36 @@ export function ReportsView({ initialData }: ReportsViewProps) {
       ]),
     ];
     downloadCsv("project_progress_comparison", rows);
+  };
+
+  const exportOnTimeCompletionCsv = () => {
+    const rows = [
+      ["Metric", "Value"],
+      ["On-Time Completion Rate", `${data.onTimeCompletion.rate}%`],
+      ["On-Time Completed Tasks", data.onTimeCompletion.onTimeCount],
+      ["Total Completed Tasks with Due Date", data.onTimeCompletion.totalCompletedWithDueDate],
+    ];
+    downloadCsv("on_time_completion_rate", rows);
+  };
+
+  const exportPpcTrendCsv = () => {
+    const rows = [
+      ["Week Starting", "PPC (%)", "Tasks Due", "Tasks Completed On-Time"],
+      ...data.ppcTrend.map((item) => [item.weekLabel, `${item.ppc}%`, item.dueCount, item.completedOnTimeCount]),
+    ];
+    downloadCsv("ppc_last_planner_system", rows);
+  };
+
+  const exportResourceUtilizationCsv = () => {
+    const rows = [
+      ["Resource State", "Quantity"],
+      ["In-Use (Active)", data.resourceUtilization.inUseCount],
+      ["Approved (Idle)", data.resourceUtilization.idleApprovedCount],
+      ["Requested (Pending)", data.resourceUtilization.requestedCount],
+      ["Total Active Allocations", data.resourceUtilization.totalActiveCount],
+      ["Utilization Rate", `${data.resourceUtilization.utilizationPct}%`],
+    ];
+    downloadCsv("resource_utilization", rows);
   };
 
   const handlePrintPdf = () => {
@@ -465,6 +500,227 @@ export function ReportsView({ initialData }: ReportsViewProps) {
                   <Bar dataKey="progressPercent" name="% Complete" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Card 5: On-Time Completion Rate */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card">
+          <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">On-Time Completion Rate</h3>
+                <p className="text-xs text-muted-foreground">Tasks finished before or on their due date</p>
+              </div>
+            </div>
+            <button
+              onClick={exportOnTimeCompletionCsv}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 py-4">
+            {data.onTimeCompletion.totalCompletedWithDueDate === 0 ? (
+              <p className="text-xs text-muted-foreground">No completed tasks with due dates in range.</p>
+            ) : (
+              <>
+                <div className="relative flex items-center justify-center">
+                  <svg viewBox="0 0 120 120" className="w-36 h-36 -rotate-90">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--border))" strokeWidth="10" />
+                    <circle
+                      cx="60" cy="60" r="50" fill="none"
+                      stroke={data.onTimeCompletion.rate >= 70 ? "#10b981" : data.onTimeCompletion.rate >= 40 ? "#f59e0b" : "#f43f5e"}
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(data.onTimeCompletion.rate / 100) * 314} 314`}
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="text-3xl font-bold text-foreground">{data.onTimeCompletion.rate}%</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">on time</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>
+                    <span className="font-semibold text-foreground">{data.onTimeCompletion.onTimeCount}</span> on-time
+                  </span>
+                  <span className="text-border">·</span>
+                  <span>
+                    <span className="font-semibold text-foreground">{data.onTimeCompletion.totalCompletedWithDueDate}</span> total with due date
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Card 6: Percent Plan Complete (PPC) — Last Planner System */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card">
+          <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950/60 flex items-center justify-center">
+                <Target className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Percent Plan Complete</h3>
+                <p className="text-xs text-muted-foreground">PPC (Last Planner System) — weekly reliability %</p>
+              </div>
+            </div>
+            <button
+              onClick={exportPpcTrendCsv}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          </div>
+
+          <div className="h-64 w-full">
+            {data.ppcTrend.every((w) => w.dueCount === 0) ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+                No tasks with due dates in selected range.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.ppcTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="weekLabel" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
+                  <YAxis
+                    domain={[0, 100]}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickFormatter={(v) => `${v}%`}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(val: any, name: any) => [`${val}%`, name]}
+                    labelFormatter={(label) => `Week of ${label}`}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "0.5rem",
+                      fontSize: "12px",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ppc"
+                    name="PPC %"
+                    stroke="#8b5cf6"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: "#8b5cf6", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Card 7: Resource Utilization */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center">
+                <Cpu className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Resource Utilization</h3>
+                <p className="text-xs text-muted-foreground">In-use vs idle approved vs pending requested allocations</p>
+              </div>
+            </div>
+            <button
+              onClick={exportResourceUtilizationCsv}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+            {data.resourceUtilization.totalActiveCount === 0 ? (
+              <p className="text-xs text-muted-foreground">No active resource allocations found.</p>
+            ) : (
+              <>
+                {/* Donut */}
+                <div className="h-52 w-52 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "In-Use", value: data.resourceUtilization.inUseCount, color: "#4f46e5" },
+                          { name: "Approved (Idle)", value: data.resourceUtilization.idleApprovedCount, color: "#a5b4fc" },
+                          { name: "Requested", value: data.resourceUtilization.requestedCount, color: "#e2e8f0" },
+                        ].filter((d) => d.value > 0)}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={52}
+                        outerRadius={76}
+                        paddingAngle={3}
+                      >
+                        {[
+                          { name: "In-Use", value: data.resourceUtilization.inUseCount, color: "#4f46e5" },
+                          { name: "Approved (Idle)", value: data.resourceUtilization.idleApprovedCount, color: "#a5b4fc" },
+                          { name: "Requested", value: data.resourceUtilization.requestedCount, color: "#e2e8f0" },
+                        ]
+                          .filter((d) => d.value > 0)
+                          .map((entry, index) => (
+                            <Cell key={`cell-util-${index}`} fill={entry.color} />
+                          ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: any, name: any) => [val, name]}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "0.5rem",
+                          fontSize: "12px",
+                          color: "hsl(var(--foreground))",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Stats panel */}
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-4xl font-bold text-foreground">{data.resourceUtilization.utilizationPct}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">utilization rate</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: "In-Use (Active)", value: data.resourceUtilization.inUseCount, color: "#4f46e5" },
+                      { label: "Approved (Idle)", value: data.resourceUtilization.idleApprovedCount, color: "#a5b4fc" },
+                      { label: "Requested", value: data.resourceUtilization.requestedCount, color: "#e2e8f0" },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-muted-foreground">{item.label}:</span>
+                        <span className="font-semibold text-foreground">{item.value}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 text-xs pt-1 border-t border-border/50">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-transparent" />
+                      <span className="text-muted-foreground">Total Active:</span>
+                      <span className="font-semibold text-foreground">{data.resourceUtilization.totalActiveCount}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
