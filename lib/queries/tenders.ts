@@ -18,6 +18,8 @@ export interface BidItem {
   contractor_id: string;
   bid_amount: number;
   proposal_text: string | null;
+  emd_reference?: string | null;
+  terms_accepted?: boolean;
   status: BidStatus;
   submitted_at: string;
   reviewed_by: string | null;
@@ -37,6 +39,13 @@ export interface TenderItem {
   eligibility_criteria: string | null;
   estimated_value_min: number | null;
   estimated_value_max: number | null;
+  emd_amount: number | null;
+  emd_refundable: boolean;
+  tender_fee: number | null;
+  performance_guarantee_percent: number | null;
+  opening_date: string | null;
+  special_conditions: string | null;
+  legal_clauses: string | null;
   submission_deadline: string;
   status: TenderStatus;
   created_by: string;
@@ -63,6 +72,13 @@ export interface CreateTenderInput {
   eligibility_criteria?: string;
   estimated_value_min?: number | null;
   estimated_value_max?: number | null;
+  emd_amount?: number | null;
+  emd_refundable?: boolean;
+  tender_fee?: number | null;
+  performance_guarantee_percent?: number | null;
+  opening_date?: string | null;
+  special_conditions?: string;
+  legal_clauses?: string;
   submission_deadline: string;
   status: TenderStatus;
 }
@@ -119,6 +135,13 @@ export async function getTenders(
       eligibility_criteria: item.eligibility_criteria,
       estimated_value_min: item.estimated_value_min ? Number(item.estimated_value_min) : null,
       estimated_value_max: item.estimated_value_max ? Number(item.estimated_value_max) : null,
+      emd_amount: item.emd_amount ? Number(item.emd_amount) : null,
+      emd_refundable: item.emd_refundable ?? true,
+      tender_fee: item.tender_fee ? Number(item.tender_fee) : null,
+      performance_guarantee_percent: item.performance_guarantee_percent ? Number(item.performance_guarantee_percent) : null,
+      opening_date: item.opening_date || null,
+      special_conditions: item.special_conditions || null,
+      legal_clauses: item.legal_clauses || null,
       submission_deadline: item.submission_deadline,
       status: item.status,
       created_by: item.created_by,
@@ -205,6 +228,13 @@ export async function getTenderById(
     eligibility_criteria: tenderData.eligibility_criteria,
     estimated_value_min: tenderData.estimated_value_min ? Number(tenderData.estimated_value_min) : null,
     estimated_value_max: tenderData.estimated_value_max ? Number(tenderData.estimated_value_max) : null,
+    emd_amount: tenderData.emd_amount ? Number(tenderData.emd_amount) : null,
+    emd_refundable: tenderData.emd_refundable ?? true,
+    tender_fee: tenderData.tender_fee ? Number(tenderData.tender_fee) : null,
+    performance_guarantee_percent: tenderData.performance_guarantee_percent ? Number(tenderData.performance_guarantee_percent) : null,
+    opening_date: tenderData.opening_date || null,
+    special_conditions: tenderData.special_conditions || null,
+    legal_clauses: tenderData.legal_clauses || null,
     submission_deadline: tenderData.submission_deadline,
     status: tenderData.status,
     created_by: tenderData.created_by,
@@ -239,6 +269,13 @@ export async function createTender(
       eligibility_criteria: input.eligibility_criteria || null,
       estimated_value_min: input.estimated_value_min || null,
       estimated_value_max: input.estimated_value_max || null,
+      emd_amount: input.emd_amount || null,
+      emd_refundable: input.emd_refundable ?? true,
+      tender_fee: input.tender_fee || null,
+      performance_guarantee_percent: input.performance_guarantee_percent || null,
+      opening_date: input.opening_date || null,
+      special_conditions: input.special_conditions || null,
+      legal_clauses: input.legal_clauses || null,
       submission_deadline: input.submission_deadline,
       status: input.status,
       created_by: creatorId,
@@ -268,13 +305,17 @@ export async function submitBid(
   tenderId: string,
   contractorId: string,
   bidAmount: number,
-  proposalText: string
+  proposalText: string,
+  emdReference?: string | null,
+  termsAccepted: boolean = false
 ) {
   return (supabase.from("bids") as any).insert({
     tender_id: tenderId,
     contractor_id: contractorId,
     bid_amount: bidAmount,
     proposal_text: proposalText,
+    emd_reference: emdReference || null,
+    terms_accepted: termsAccepted,
     status: "submitted",
   });
 }

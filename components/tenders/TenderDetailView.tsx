@@ -32,6 +32,11 @@ import {
   User,
   Gavel,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Percent,
+  Scale,
+  FileCheck2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,10 +83,16 @@ export function TenderDetailView({
 
   const [activeTab, setActiveTab] = useState<"specs" | "bids">("specs");
 
+  // Collapsible Terms State
+  const [showSpecialTerms, setShowSpecialTerms] = useState(true);
+  const [showLegalTerms, setShowLegalTerms] = useState(false);
+
   // Contractor Bidding Form Modal State
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [proposalText, setProposalText] = useState("");
+  const [emdReference, setEmdReference] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmittingBid, setIsSubmittingBid] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
 
@@ -117,12 +128,26 @@ export function TenderDetailView({
       return;
     }
 
+    if (tender.emd_amount && tender.emd_amount > 0 && !emdReference.trim()) {
+      setBidError("EMD Payment Reference Number / Receipt ID is required for this tender.");
+      setIsSubmittingBid(false);
+      return;
+    }
+
+    if (!termsAccepted) {
+      setBidError("You must accept the Tender Special Conditions & Legal Clauses to submit your bid.");
+      setIsSubmittingBid(false);
+      return;
+    }
+
     const { error } = await submitBid(
       supabase,
       tender.id,
       user.id,
       amount,
-      proposalText
+      proposalText,
+      emdReference.trim() || null,
+      termsAccepted
     );
 
     if (error) {
@@ -234,18 +259,18 @@ export function TenderDetailView({
           </div>
         </div>
 
-        {/* Deadline & Budget Bar */}
+        {/* Bidding Window & Estimated Budget Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border/60 text-xs">
           <div>
-            <span className="text-muted-foreground block text-[11px]">Submission Deadline</span>
+            <span className="text-muted-foreground block text-[11px]">Bidding Window</span>
             <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
               <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-              {new Date(tender.submission_deadline).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+              Open for bids: {tender.opening_date ? new Date(tender.opening_date).toLocaleDateString() : "Immediately"} → {new Date(tender.submission_deadline).toLocaleDateString()}
             </span>
           </div>
 
           <div>
-            <span className="text-muted-foreground block text-[11px]">Estimated Value Range</span>
+            <span className="text-muted-foreground block text-[11px]">Estimated Package Value</span>
             <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
               <IndianRupee className="w-3.5 h-3.5 text-emerald-500" />
               {tender.estimated_value_min ? `₹${tender.estimated_value_min.toLocaleString("en-IN")}` : "N/A"} -{" "}
@@ -260,6 +285,42 @@ export function TenderDetailView({
                 ? "Contract Awarded"
                 : `${tender.bids_count || 0} Bid(s) Received`}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* FINANCIAL REQUIREMENTS CARD */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+          <IndianRupee className="w-5 h-5 text-indigo-500" />
+          Financial & Procurement Requirements
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-1">
+            <span className="text-muted-foreground text-[11px] block">Earnest Money Deposit (EMD)</span>
+            <p className="text-base font-extrabold text-foreground">
+              {tender.emd_amount ? `₹${tender.emd_amount.toLocaleString("en-IN")}` : "Not Required"}
+            </p>
+            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              {tender.emd_refundable ? "🟢 Refundable to non-winners" : "🔴 Non-refundable"}
+            </span>
+          </div>
+
+          <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-1">
+            <span className="text-muted-foreground text-[11px] block">Tender Document Fee</span>
+            <p className="text-base font-extrabold text-foreground">
+              {tender.tender_fee ? `₹${tender.tender_fee.toLocaleString("en-IN")}` : "Free / Nil"}
+            </p>
+            <span className="text-[10px] text-muted-foreground">Non-refundable document cost</span>
+          </div>
+
+          <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-1">
+            <span className="text-muted-foreground text-[11px] block">Performance Guarantee (PG)</span>
+            <p className="text-base font-extrabold text-foreground">
+              {tender.performance_guarantee_percent ? `${tender.performance_guarantee_percent}%` : "0%"}
+            </p>
+            <span className="text-[10px] text-muted-foreground">Payable by winner post-award</span>
           </div>
         </div>
       </div>
@@ -315,11 +376,17 @@ export function TenderDetailView({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-3 gap-4 text-xs">
                 <div>
                   <span className="text-muted-foreground">Bid Amount Submitted:</span>
                   <p className="text-base font-bold text-foreground">
                     ₹{tender.my_bid.bid_amount.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">EMD Reference No:</span>
+                  <p className="text-xs font-medium text-foreground">
+                    {tender.my_bid.emd_reference || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -336,13 +403,6 @@ export function TenderDetailView({
                   <p className="text-xs text-muted-foreground bg-background p-3 rounded-xl whitespace-pre-wrap">
                     {tender.my_bid.proposal_text}
                   </p>
-                </div>
-              )}
-
-              {tender.my_bid.review_notes && (
-                <div className="p-3 bg-card border border-border rounded-xl text-xs">
-                  <span className="font-semibold text-foreground">Evaluation Feedback: </span>
-                  <span className="text-muted-foreground">{tender.my_bid.review_notes}</span>
                 </div>
               )}
             </div>
@@ -375,6 +435,58 @@ export function TenderDetailView({
               </div>
             </div>
           )}
+
+          {/* Special Conditions & Legal Clauses Collapsible Section */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Scale className="w-5 h-5 text-indigo-500" />
+                Special Conditions & Legal Clauses
+              </h3>
+            </div>
+
+            <div className="divide-y divide-border">
+              {/* Special Conditions Collapsible */}
+              <div className="p-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSpecialTerms((prev) => !prev)}
+                  className="w-full flex items-center justify-between text-left focus:outline-none"
+                >
+                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <FileCheck2 className="w-4 h-4 text-indigo-500" /> Special Site Conditions
+                  </span>
+                  {showSpecialTerms ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+
+                {showSpecialTerms && (
+                  <div className="text-xs text-foreground/90 leading-relaxed font-mono whitespace-pre-wrap bg-muted/20 p-4 rounded-xl border border-border/50">
+                    {tender.special_conditions || "Standard site mobilization, access, working hours, and quality control terms apply."}
+                  </div>
+                )}
+              </div>
+
+              {/* Legal Clauses Collapsible */}
+              <div className="p-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLegalTerms((prev) => !prev)}
+                  className="w-full flex items-center justify-between text-left focus:outline-none"
+                >
+                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-indigo-500" /> Statutory & Legal Clauses
+                  </span>
+                  {showLegalTerms ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+
+                {showLegalTerms && (
+                  <div className="text-xs text-foreground/90 leading-relaxed font-mono whitespace-pre-wrap bg-muted/20 p-4 rounded-xl border border-border/50">
+                    {tender.legal_clauses || "Dispute Resolution (Indian Arbitration Act), Force Majeure, 14-day Termination Notice, and 12-month Defect Liability Period (DLP) apply."}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Tender Documents */}
           <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
@@ -418,7 +530,7 @@ export function TenderDetailView({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Review received contractor proposals, shortlist candidates, or award the trade package.
+              Review received contractor proposals, EMD references, shortlist candidates, or award the trade package.
             </p>
             <button
               onClick={() => setBidSort((prev) => (prev === "asc" ? "desc" : "asc"))}
@@ -442,7 +554,7 @@ export function TenderDetailView({
                     <tr>
                       <th className="px-4 py-3">Contractor / Firm</th>
                       <th className="px-4 py-3">Bid Amount (₹)</th>
-                      <th className="px-4 py-3">Submitted Date</th>
+                      <th className="px-4 py-3">EMD Reference</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
@@ -478,8 +590,8 @@ export function TenderDetailView({
                             ₹{b.bid_amount.toLocaleString("en-IN")}
                           </td>
 
-                          <td className="px-4 py-3.5 text-muted-foreground">
-                            {new Date(b.submitted_at).toLocaleDateString()}
+                          <td className="px-4 py-3.5 text-muted-foreground font-mono text-[11px]">
+                            {b.emd_reference || "N/A"}
                           </td>
 
                           <td className="px-4 py-3.5">
@@ -510,7 +622,7 @@ export function TenderDetailView({
 
       {/* CONTRACTOR BID SUBMISSION MODAL */}
       {showBidModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4">
             <h3 className="text-lg font-bold text-foreground">Submit Proposal for {tender.title}</h3>
 
@@ -538,17 +650,51 @@ export function TenderDetailView({
                 </div>
               </div>
 
+              {/* EMD Reference Input */}
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  EMD Payment Reference / Receipt ID {tender.emd_amount && tender.emd_amount > 0 ? "*" : "(Optional)"}
+                </label>
+                <input
+                  type="text"
+                  value={emdReference}
+                  onChange={(e) => setEmdReference(e.target.value)}
+                  placeholder="e.g. UTR / NEFT / Cheque No. TXN-984021"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required={Boolean(tender.emd_amount && tender.emd_amount > 0)}
+                />
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Record payment receipt ID for EMD deposit verification (₹{tender.emd_amount ? tender.emd_amount.toLocaleString("en-IN") : "0"}).
+                </p>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">
                   Proposal Statement & Execution Terms
                 </label>
                 <textarea
-                  rows={5}
+                  rows={4}
                   value={proposalText}
                   onChange={(e) => setProposalText(e.target.value)}
                   placeholder="Summarize your trade methodology, key material brands proposed, payment terms, and timeline commitment..."
                   className="w-full p-3 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              {/* Required Terms Checkbox */}
+              <div className="p-3 bg-muted/30 border border-border rounded-xl">
+                <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                    required
+                  />
+                  <span>
+                    I have read, understood, and accept the <strong>Special Site Conditions</strong> and <strong>Legal Clauses</strong> specified in this tender document.
+                  </span>
+                </label>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
@@ -561,8 +707,8 @@ export function TenderDetailView({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingBid}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+                  disabled={isSubmittingBid || !termsAccepted || (Boolean(tender.emd_amount && tender.emd_amount > 0) && !emdReference.trim())}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
                 >
                   {isSubmittingBid && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Submit Official Bid
@@ -599,9 +745,9 @@ export function TenderDetailView({
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Submitted On:</span>
-                <span className="font-semibold text-foreground">
-                  {new Date(selectedBid.submitted_at).toLocaleString()}
+                <span className="text-muted-foreground">EMD Reference No:</span>
+                <span className="font-mono text-foreground font-semibold">
+                  {selectedBid.emd_reference || "N/A"}
                 </span>
               </div>
             </div>

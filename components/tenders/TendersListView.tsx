@@ -282,19 +282,29 @@ export function TendersListView({ tenders, projects, user }: TendersListViewProp
                     )}
                   </div>
 
-                  {/* Estimated Value */}
-                  {(tender.estimated_value_min || tender.estimated_value_max) && (
-                    <div className="p-2.5 bg-muted/40 rounded-xl mb-4 text-xs">
-                      <span className="text-muted-foreground block text-[11px]">Estimated Package Value</span>
-                      <span className="font-bold text-foreground">
-                        {tender.estimated_value_min
-                          ? `₹${tender.estimated_value_min.toLocaleString("en-IN")}`
-                          : "N/A"}{" "}
-                        -{" "}
-                        {tender.estimated_value_max
-                          ? `₹${tender.estimated_value_max.toLocaleString("en-IN")}`
-                          : "N/A"}
-                      </span>
+                  {/* Estimated Value & EMD Badge */}
+                  {(tender.estimated_value_min || tender.estimated_value_max || tender.emd_amount !== undefined) && (
+                    <div className="p-2.5 bg-muted/40 rounded-xl mb-4 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-[11px]">Est. Package Value</span>
+                        <span className="font-bold text-foreground">
+                          {tender.estimated_value_min
+                            ? `₹${tender.estimated_value_min.toLocaleString("en-IN")}`
+                            : "N/A"}{" "}
+                          -{" "}
+                          {tender.estimated_value_max
+                            ? `₹${tender.estimated_value_max.toLocaleString("en-IN")}`
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+                        <span className="text-muted-foreground">EMD Deposit:</span>
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                          {tender.emd_amount
+                            ? `₹${tender.emd_amount.toLocaleString("en-IN")} (${tender.emd_refundable ? "Refundable" : "Non-Refundable"})`
+                            : "Not Required"}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -19,6 +19,9 @@ import {
   Loader2,
   Wand2,
   Info,
+  ShieldCheck,
+  Scale,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,43 +74,7 @@ const SCOPE_TEMPLATES: Record<string, string> = {
 ### 3. Testing & Handover
 - Insulation resistance test, earth pit resistance testing (<1 ohm), and full load testing.`,
 
-  mechanical: `### 1. Scope of Work
-- Supply, fabrication, and erection of GI ducting with thermal insulation.
-- Installation of Chilled Water Piping, Air Handling Units (AHUs), and Fan Coil Units (FCUs).
-- Mechanical ventilation for basement parking and smoke extraction systems.
-
-### 2. Testing & Handover
-- Hydrostatic pressure testing of piping at 1.5x working pressure for 24 hours.
-- Air balancing report & CFM validation for all zones.`,
-
-  interior: `### 1. Scope of Work
-- Gypsum board false ceiling installation with perimeter cove light channels.
-- Modular acoustic wall paneling and toughened glass partition systems.
-- Supply and installation of BWR grade plywood joinery with 1.0mm premium laminate finish.
-- Polyurethane (PU) paint finish on exposed timber and low-VOC emulsion paint on walls.
-
-### 2. Exclusions
-- MEP final fixture terminations (handled by respective MEP contractors).`,
-
-  plumbing: `### 1. Scope of Work
-- Internal CPVC cold/hot water supply lines and SWR drainage stack piping.
-- Installation of sanitary fixtures, CP fittings, and rainwater harvesting connections.
-- Fire sprinkler main network, hose reel cabinets, and landing valves.
-
-### 2. Testing
-- Water tightness test for drainage lines & 10 bar hydraulic test for supply lines.`,
-
-  structural_steel: `### 1. Scope of Work
-- Fabrication, shop-priming, and erection of structural steel sections (ISMB/ISMC).
-- High-strength friction grip (HSFG) bolting and full-penetration butt welding.
-- Application of intumescent fire-proof paint (2-hour fire rating).`,
-
-  landscaping: `### 1. Scope of Work
-- Site grading, topsoil enrichment, and softscape lawn/plant installation.
-- Interlocking paver block installation for pedestrian walkways and driveway perimeters.
-- Automated drip irrigation network and outdoor landscape lighting.`,
-
-  other: `### 1. Scope of Work
+  default: `### 1. Scope of Work
 - Detailed description of trade deliverables and milestones.
 - Material quality standards and testing requirements.
 - Exclusions and site boundary limits.`,
@@ -124,13 +91,31 @@ const ELIGIBILITY_TEMPLATES: Record<string, string> = {
 - Turn-over of at least ₹30 Lakhs per annum for the last 2 financial years.
 - Dedicated Licensed Electrical Supervisor on site.`,
 
-  interior: `- Proven track record in corporate office or hospitality interior fit-outs.
-- Portfolio of at least 3 completed projects with verifiable client completion certificates.
-- Skilled carpenter & painter workforce available for immediate deployment.`,
-
   default: `- Minimum 3 years of trade experience in similar scope.
 - Valid GST registration, PAN, and active bank account.
 - Satisfactory safety track record with zero major lost-time incidents in past 12 months.`,
+};
+
+const SPECIAL_CONDITIONS_TEMPLATES: Record<string, string> = {
+  civil: `1. SITE ACCESS & MOBILIZATION: Contractor must mobilize site office, store container, and initial manpower within 7 calendar days of Work Order issuance.
+2. WORKING HOURS: Concreting and heavy material movement permitted 24x7 with prior PM approval; noise-heavy demolition restricted to 08:00 - 19:00 hrs.
+3. WATER & POWER: Temporary 415V construction power tap and non-potable water connection provided by employer at site sub-station at nominal tariff.
+4. QUALITY CONTROL: Cube test certificates from NABL accredited laboratory required for every 30m³ concrete poured.`,
+
+  electrical: `1. OEM APPROVALS: All switchgear, cables, and conduit fittings must be sourced directly from authorized OEM distributors with factory test certificates.
+2. SHUTDOWN PERMITS: High-voltage terminations and transformer tie-ins require 48-hour advance notice for utility shutdown clearance.
+3. AS-BUILT DRAWINGS: Contractor shall submit 3 physical sets + AutoCAD digital drawings of as-built electrical layouts prior to final invoice clearance.`,
+
+  default: `1. MOBILIZATION: Contractor shall mobilize site team within 7 days of contract execution.
+2. SAFETY COMPLIANCE: 100% PPE compliance required. Zero tolerance for un-helmeted site personnel.
+3. MATERIAL DISPATCH: Delivery challans and mill test certificates required for all site incoming materials.`,
+};
+
+const LEGAL_CLAUSES_TEMPLATES: Record<string, string> = {
+  default: `1. DISPUTE RESOLUTION: Any dispute arising out of or in connection with this contract shall be settled amicably through mutual negotiations, failing which it shall be referred to sole arbitration under the Indian Arbitration and Conciliation Act, 1996. Venue of arbitration shall be Mumbai.
+2. FORCE MAJEURE: Neither party shall be held liable for non-performance or delay caused by acts of God, extreme natural disasters, pandemic lock-outs, or government embargoes beyond reasonable control.
+3. TERMINATION FOR CONVENIENCE & DEFAULT: Employer reserves the right to terminate contract with 14 days written notice upon material breach or non-performance.
+4. DEFECT LIABILITY PERIOD (DLP): Contractor shall guarantee all executed trade works against structural/functional defects for a period of 12 calendar months from Handover Date.`,
 };
 
 export function TenderCreationWizard({
@@ -142,7 +127,7 @@ export function TenderCreationWizard({
   const router = useRouter();
   const supabase = createClient();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
@@ -154,11 +139,21 @@ export function TenderCreationWizard({
   const [estimatedValueMin, setEstimatedValueMin] = useState<string>("");
   const [estimatedValueMax, setEstimatedValueMax] = useState<string>("");
 
-  // Default deadline: 10 days from now
-  const defaultDeadline = new Date(Date.now() + 10 * 86400000)
-    .toISOString()
-    .slice(0, 16);
+  // Detailed Terms State
+  const [emdAmount, setEmdAmount] = useState<string>("");
+  const [emdRefundable, setEmdRefundable] = useState<boolean>(true);
+  const [tenderFee, setTenderFee] = useState<string>("");
+  const [performanceGuaranteePercent, setPerformanceGuaranteePercent] = useState<string>("5");
+  
+  // Dates: opening_date (default today) & submission_deadline (default 10 days out)
+  const defaultOpening = new Date().toISOString().slice(0, 16);
+  const defaultDeadline = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 16);
+  const [openingDate, setOpeningDate] = useState<string>(defaultOpening);
   const [submissionDeadline, setSubmissionDeadline] = useState(defaultDeadline);
+
+  // Legal & Special Conditions
+  const [specialConditions, setSpecialConditions] = useState("");
+  const [legalClauses, setLegalClauses] = useState("");
 
   // Files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -166,29 +161,39 @@ export function TenderCreationWizard({
 
   if (!isOpen) return null;
 
-  // Handler to apply category template
-  const handleApplyCategoryTemplate = () => {
-    const template = SCOPE_TEMPLATES[category] || SCOPE_TEMPLATES.other;
-    setScopeDescription(template);
-
-    const eligTemplate = ELIGIBILITY_TEMPLATES[category] || ELIGIBILITY_TEMPLATES.default;
+  // Handlers to apply category templates
+  const handleApplyScopeTemplate = () => {
+    setScopeDescription(SCOPE_TEMPLATES[category] || SCOPE_TEMPLATES.default);
     if (!eligibilityCriteria) {
-      setEligibilityCriteria(eligTemplate);
+      setEligibilityCriteria(ELIGIBILITY_TEMPLATES[category] || ELIGIBILITY_TEMPLATES.default);
     }
   };
 
-  // Soft deadline validation
-  const deadlineDate = new Date(submissionDeadline);
-  const minValidDeadline = new Date(Date.now() + 3 * 86400000);
-  const isDeadlineTooShort = deadlineDate < minValidDeadline;
+  const handleApplyTermsTemplate = () => {
+    setSpecialConditions(SPECIAL_CONDITIONS_TEMPLATES[category] || SPECIAL_CONDITIONS_TEMPLATES.default);
+    setLegalClauses(LEGAL_CLAUSES_TEMPLATES.default);
+  };
+
+  // Date validation: opening_date MUST be before submission_deadline
+  const openingD = new Date(openingDate);
+  const deadlineD = new Date(submissionDeadline);
+  const isOpeningDateInvalid = openingD >= deadlineD;
 
   // Final Submit
   const handleSubmitTender = async (targetStatus: TenderStatus) => {
+    if (isOpeningDateInvalid) {
+      setErrorMsg("Tender opening date must be strictly before the submission deadline.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg(null);
 
     const minVal = estimatedValueMin ? parseFloat(estimatedValueMin) : null;
     const maxVal = estimatedValueMax ? parseFloat(estimatedValueMax) : null;
+    const emdVal = emdAmount ? parseFloat(emdAmount) : null;
+    const feeVal = tenderFee ? parseFloat(tenderFee) : null;
+    const pgVal = performanceGuaranteePercent ? parseFloat(performanceGuaranteePercent) : null;
 
     const { data: newTender, error: createErr } = await createTender(
       supabase,
@@ -200,7 +205,14 @@ export function TenderCreationWizard({
         eligibility_criteria: eligibilityCriteria,
         estimated_value_min: minVal,
         estimated_value_max: maxVal,
+        emd_amount: emdVal,
+        emd_refundable: emdRefundable,
+        tender_fee: feeVal,
+        performance_guarantee_percent: pgVal,
+        opening_date: new Date(openingDate).toISOString(),
         submission_deadline: new Date(submissionDeadline).toISOString(),
+        special_conditions: specialConditions,
+        legal_clauses: legalClauses,
         status: targetStatus,
       },
       userId
@@ -242,10 +254,12 @@ export function TenderCreationWizard({
 
   const STEPS = [
     { num: 1, label: "Basics" },
-    { num: 2, label: "Scope & Template" },
-    { num: 3, label: "Eligibility & Budget" },
-    { num: 4, label: "Documents" },
-    { num: 5, label: "Review & Publish" },
+    { num: 2, label: "Scope" },
+    { num: 3, label: "Eligibility" },
+    { num: 4, label: "Financial Terms" },
+    { num: 5, label: "Terms & Legal" },
+    { num: 6, label: "Documents" },
+    { num: 7, label: "Review & Publish" },
   ];
 
   return (
@@ -254,9 +268,9 @@ export function TenderCreationWizard({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40">
           <div>
-            <h3 className="text-lg font-bold text-foreground">Create New Tender</h3>
+            <h3 className="text-lg font-bold text-foreground">Create New Tender Package</h3>
             <p className="text-xs text-muted-foreground">
-              Guide contractor bidding by setting clear scope, eligibility, and deadline specs.
+              Configure procurement specs, EMD deposits, dates, and legal clauses.
             </p>
           </div>
           <button
@@ -273,10 +287,10 @@ export function TenderCreationWizard({
             const isActive = step === s.num;
             const isDone = step > s.num;
             return (
-              <div key={s.num} className="flex items-center gap-2 shrink-0">
+              <div key={s.num} className="flex items-center gap-1.5 shrink-0">
                 <div
                   className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors",
                     isDone
                       ? "bg-emerald-500 text-white"
                       : isActive
@@ -284,17 +298,17 @@ export function TenderCreationWizard({
                       : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {isDone ? <Check className="w-4 h-4" /> : s.num}
+                  {isDone ? <Check className="w-3.5 h-3.5" /> : s.num}
                 </div>
                 <span
                   className={cn(
-                    "text-xs font-medium hidden sm:inline",
+                    "text-xs font-medium hidden md:inline",
                     isActive ? "text-foreground font-semibold" : "text-muted-foreground"
                   )}
                 >
                   {s.label}
                 </span>
-                {s.num < 5 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 mx-1 hidden sm:inline" />}
+                {s.num < 7 && <ChevronRight className="w-3 h-3 text-muted-foreground/50 mx-0.5 hidden md:inline" />}
               </div>
             );
           })}
@@ -314,14 +328,14 @@ export function TenderCreationWizard({
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">
-                  Tender Title *
+                  Tender Package Title *
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Guardrail & Safety Barrier Installation — NH-48"
-                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   required
                 />
               </div>
@@ -334,7 +348,7 @@ export function TenderCreationWizard({
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -346,14 +360,14 @@ export function TenderCreationWizard({
 
                 <div>
                   <label className="text-xs font-semibold text-foreground mb-1 block">
-                    Linked Project (Optional)
+                    Linked Construction Project (Optional)
                   </label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
-                    <option value="">-- Standalone Tender (No Project Link) --</option>
+                    <option value="">-- Standalone Subcontract (No Project Link) --</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
@@ -368,7 +382,7 @@ export function TenderCreationWizard({
                 <div>
                   <p className="font-semibold">Trade Category Scaffolding</p>
                   <p className="mt-0.5 text-muted-foreground">
-                    Selecting a trade category automatically prepares tailored scope and eligibility boilerplate templates in the next step to save setup time.
+                    Selecting a trade category automatically pre-fills boilerplate scope, eligibility, and legal terms in subsequent steps.
                   </p>
                 </div>
               </div>
@@ -384,11 +398,11 @@ export function TenderCreationWizard({
                 </label>
                 <button
                   type="button"
-                  onClick={handleApplyCategoryTemplate}
+                  onClick={handleApplyScopeTemplate}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
-                  Apply {CATEGORIES.find((c) => c.value === category)?.label} Scaffolding Template
+                  Pre-fill {CATEGORIES.find((c) => c.value === category)?.label} Template
                 </button>
               </div>
 
@@ -414,7 +428,7 @@ export function TenderCreationWizard({
                   value={eligibilityCriteria}
                   onChange={(e) => setEligibilityCriteria(e.target.value)}
                   placeholder="Specify required experience years, licenses, turn-over minimums, etc."
-                  className="w-full p-3.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full p-3.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                 />
               </div>
 
@@ -430,7 +444,7 @@ export function TenderCreationWizard({
                       value={estimatedValueMin}
                       onChange={(e) => setEstimatedValueMin(e.target.value)}
                       placeholder="e.g. 1500000"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                     />
                   </div>
                 </div>
@@ -446,38 +460,190 @@ export function TenderCreationWizard({
                       value={estimatedValueMax}
                       onChange={(e) => setEstimatedValueMax(e.target.value)}
                       placeholder="e.g. 2000000"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: FINANCIAL REQUIREMENTS & DATES */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                <IndianRupee className="w-4 h-4 text-indigo-500" />
+                Financial Requirements & Bidding Window
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* EMD Amount */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Earnest Money Deposit / EMD (₹)
+                  </label>
+                  <div className="relative">
+                    <IndianRupee className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="number"
+                      value={emdAmount}
+                      onChange={(e) => setEmdAmount(e.target.value)}
+                      placeholder="e.g. 50000 (Leave blank if zero)"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* EMD Refundable Toggle */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    EMD Refundable Status
+                  </label>
+                  <div className="flex items-center gap-3 pt-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="emdRefundable"
+                        checked={emdRefundable === true}
+                        onChange={() => setEmdRefundable(true)}
+                        className="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                        🟢 Refundable to unsuccessful bidders
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Tender Fee */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Non-Refundable Tender Fee (₹)
+                  </label>
+                  <div className="relative">
+                    <IndianRupee className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="number"
+                      value={tenderFee}
+                      onChange={(e) => setTenderFee(e.target.value)}
+                      placeholder="e.g. 5000"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Performance Guarantee % */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Performance Guarantee (%)
+                  </label>
+                  <div className="relative">
+                    <Percent className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={performanceGuaranteePercent}
+                      onChange={(e) => setPerformanceGuaranteePercent(e.target.value)}
+                      placeholder="e.g. 5 (5% of awarded contract)"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                     />
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-foreground mb-1 block">
-                  Submission Deadline *
-                </label>
-                <div className="relative">
-                  <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="datetime-local"
-                    value={submissionDeadline}
-                    onChange={(e) => setSubmissionDeadline(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
-                  />
+              {/* Opening & Submission Window */}
+              <div className="pt-2 border-t border-border space-y-4">
+                <h5 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-indigo-500" />
+                  Bidding Window (Opening Date vs Submission Deadline)
+                </h5>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">
+                      Tender Opening Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={openingDate}
+                      onChange={(e) => setOpeningDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">
+                      Submission Closing Deadline *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={submissionDeadline}
+                      onChange={(e) => setSubmissionDeadline(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      required
+                    />
+                  </div>
                 </div>
-                {isDeadlineTooShort && (
-                  <p className="text-xs text-amber-500 mt-1 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    Warning: Recommended bidding window is at least 3 days from today.
+
+                {isOpeningDateInvalid && (
+                  <p className="text-xs text-rose-500 font-medium flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    Invalid Date Window: Opening Date must be set BEFORE the Submission Closing Deadline.
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* STEP 4: DOCUMENTS */}
-          {step === 4 && (
+          {/* STEP 5: TERMS & LEGAL */}
+          {step === 5 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-indigo-500" />
+                  Special Conditions & Legal Clauses
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleApplyTermsTemplate}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors"
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  Pre-fill Standard Legal & Special Terms Template
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  Special Site Conditions
+                </label>
+                <textarea
+                  rows={4}
+                  value={specialConditions}
+                  onChange={(e) => setSpecialConditions(e.target.value)}
+                  placeholder="Specify site access, mobilization deadlines, working hours, power/water provisions, etc."
+                  className="w-full p-3.5 bg-background border border-border rounded-xl text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  Legal Clauses & Statutory Terms
+                </label>
+                <textarea
+                  rows={5}
+                  value={legalClauses}
+                  onChange={(e) => setLegalClauses(e.target.value)}
+                  placeholder="Specify arbitration venue, force majeure, termination notice, defect liability period (DLP), etc."
+                  className="w-full p-3.5 bg-background border border-border rounded-xl text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6: DOCUMENTS */}
+          {step === 6 && (
             <div className="space-y-4">
               <label className="text-xs font-semibold text-foreground block">
                 Attach Supporting Tender Drawings & Specifications
@@ -517,10 +683,10 @@ export function TenderCreationWizard({
             </div>
           )}
 
-          {/* STEP 5: REVIEW & PUBLISH */}
-          {step === 5 && (
+          {/* STEP 7: REVIEW & PUBLISH */}
+          {step === 7 && (
             <div className="space-y-4">
-              <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-3">
+              <div className="p-4 bg-muted/30 border border-border rounded-2xl space-y-4">
                 <div className="flex items-center justify-between border-b border-border/60 pb-3">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">
@@ -531,33 +697,50 @@ export function TenderCreationWizard({
                       Project: {projects.find((p) => p.id === projectId)?.name || "Standalone Subcontract"}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Deadline</p>
-                    <p className="text-xs font-semibold text-foreground">
-                      {new Date(submissionDeadline).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                    </p>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-2 gap-3 text-xs border-b border-border/50 pb-3">
                   <div>
-                    <span className="text-muted-foreground">Est. Value Range:</span>{" "}
-                    <span className="font-semibold text-foreground">
+                    <span className="text-muted-foreground">Est. Budget Range:</span>{" "}
+                    <span className="font-bold text-foreground">
                       {estimatedValueMin ? `₹${parseFloat(estimatedValueMin).toLocaleString("en-IN")}` : "N/A"} -{" "}
                       {estimatedValueMax ? `₹${parseFloat(estimatedValueMax).toLocaleString("en-IN")}` : "N/A"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Attached Files:</span>{" "}
-                    <span className="font-semibold text-foreground">{selectedFiles.length} file(s)</span>
+                    <span className="text-muted-foreground">Bidding Window:</span>{" "}
+                    <span className="font-bold text-foreground">
+                      {new Date(openingDate).toLocaleDateString()} → {new Date(submissionDeadline).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">EMD Amount:</span>{" "}
+                    <span className="font-bold text-foreground">
+                      {emdAmount ? `₹${parseFloat(emdAmount).toLocaleString("en-IN")} (${emdRefundable ? "Refundable" : "Non-Refundable"})` : "None"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Tender Fee & Performance PG:</span>{" "}
+                    <span className="font-bold text-foreground">
+                      {tenderFee ? `₹${parseFloat(tenderFee).toLocaleString("en-IN")}` : "Free"} / {performanceGuaranteePercent || "0"}% PG
+                    </span>
                   </div>
                 </div>
 
                 {scopeDescription && (
-                  <div className="pt-2 border-t border-border/50">
+                  <div className="pt-1">
                     <p className="text-xs font-semibold text-foreground mb-1">Scope Preview:</p>
-                    <div className="text-xs text-muted-foreground bg-background p-3 rounded-xl max-h-36 overflow-y-auto whitespace-pre-wrap font-mono">
+                    <div className="text-xs text-muted-foreground bg-background p-3 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
                       {scopeDescription}
+                    </div>
+                  </div>
+                )}
+
+                {specialConditions && (
+                  <div className="pt-1">
+                    <p className="text-xs font-semibold text-foreground mb-1">Special Conditions Preview:</p>
+                    <div className="text-xs text-muted-foreground bg-background p-3 rounded-xl max-h-28 overflow-y-auto whitespace-pre-wrap font-mono">
+                      {specialConditions}
                     </div>
                   </div>
                 )}
@@ -577,13 +760,16 @@ export function TenderCreationWizard({
             <ChevronLeft className="w-4 h-4" /> Previous
           </button>
 
-          {step < 5 ? (
+          {step < 7 ? (
             <button
               type="button"
-              disabled={!title.trim() || (step === 3 && !submissionDeadline)}
+              disabled={!title.trim() || (step === 4 && isOpeningDateInvalid)}
               onClick={() => {
                 if (step === 1 && !scopeDescription) {
-                  handleApplyCategoryTemplate();
+                  handleApplyScopeTemplate();
+                }
+                if (step === 4 && !specialConditions) {
+                  handleApplyTermsTemplate();
                 }
                 setStep((prev) => (prev + 1) as any);
               }}
