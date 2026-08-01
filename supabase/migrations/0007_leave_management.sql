@@ -55,13 +55,11 @@ BEGIN
 
   INSERT INTO public.notifications (
     user_id,
-    title,
     message,
     type,
     link
   ) VALUES (
     NEW.user_id,
-    'Leave Request ' || INITCAP(status_label),
     'Your leave request (' || NEW.start_date || ' to ' || NEW.end_date || ') has been ' || status_label || '.',
     'status_change',
     '/workspace'
