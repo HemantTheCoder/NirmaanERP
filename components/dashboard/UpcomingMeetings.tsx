@@ -1,4 +1,4 @@
-import { Video, Users, MapPin, CalendarDays, ArrowRight } from "lucide-react";
+import { Video, MapPin, CalendarDays, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { UpcomingMeetingItem } from "@/lib/queries/meetings";

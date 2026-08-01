@@ -45,7 +45,6 @@ export function SignupForm() {
 
     if (data.user) {
       // Insert profile row in public.users
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: insertError } = await (supabase.from("users") as any).insert({
         id: data.user.id,
         email,

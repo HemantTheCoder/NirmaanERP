@@ -1,7 +1,6 @@
 "use client";
 
-import { Check, X, Shield, Info } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Check, X } from "lucide-react";
 
 interface PermissionRow {
   module: string;

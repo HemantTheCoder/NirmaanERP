@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Activity, Info, Loader2, CheckCircle2, Shield } from "lucide-react";
+import { LogOut, Info, Loader2, CheckCircle2 } from "lucide-react";
 import type { AdminUserItem } from "@/lib/queries/admin";
 import { cn } from "@/lib/utils";
 

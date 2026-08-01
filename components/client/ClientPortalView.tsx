@@ -17,8 +17,6 @@ import {
   FileSpreadsheet,
   FileCode,
   File,
-  Shield,
-  ArrowRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { approveProjectProgress, type ClientProjectItem } from "@/lib/queries/client";

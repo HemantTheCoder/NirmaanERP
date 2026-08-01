@@ -6,7 +6,6 @@ import {
   Filter,
   UserPlus,
   Trash2,
-  Shield,
   CheckCircle,
   XCircle,
   AlertTriangle,

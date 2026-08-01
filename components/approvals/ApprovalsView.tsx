@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, XCircle, Clock, Check, X, AlertTriangle, Loader2, History, Filter } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Check, X, AlertTriangle, Loader2, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateLeaveStatus, type LeaveItem } from "@/lib/queries/leaves";
 import { cn } from "@/lib/utils";

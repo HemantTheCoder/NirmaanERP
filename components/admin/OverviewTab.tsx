@@ -9,8 +9,6 @@ import {
   FolderKanban,
   Users,
   ArrowRight,
-  CheckCircle2,
-  Clock,
   ClipboardList,
 } from "lucide-react";
 import type { AdminOverviewData } from "@/lib/queries/admin";
