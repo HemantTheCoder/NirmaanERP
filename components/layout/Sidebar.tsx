@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ShieldAlert,
   Gavel,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -200,6 +201,19 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
             </div>
           </div>
         )}
+
+        <Link
+          href="/about"
+          title={collapsed ? "About" : undefined}
+          className={cn(
+            "flex items-center gap-2 text-sm text-sidebar-muted hover:text-indigo-300 transition-colors rounded-lg px-2 py-1.5 hover:bg-white/5 w-full mb-1",
+            pathname === "/about" && "bg-indigo-600 text-white font-medium shadow-md shadow-indigo-500/20",
+            collapsed && "justify-center px-0"
+          )}
+        >
+          <Info className={cn("w-4 h-4 shrink-0", pathname === "/about" ? "text-white" : "text-indigo-400")} />
+          {!collapsed && <span>About</span>}
+        </Link>
 
         <button
           id="logout-btn"
