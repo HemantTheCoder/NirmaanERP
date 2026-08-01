@@ -155,7 +155,7 @@ export function SignupForm() {
             ))}
           </select>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-300">
           Admin access is granted by your organisation administrator.
         </p>
       </div>

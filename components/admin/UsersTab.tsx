@@ -353,17 +353,17 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
                             "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold",
                             u.is_active
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                           )}
                         >
                           {u.is_active ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
-                            </>
+                            <span className="flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Active
+                            </span>
                           ) : (
-                            <>
-                              <XCircle className="w-3 h-3 text-slate-500" /> Inactive
-                            </>
+                            <span className="flex items-center gap-1">
+                              <XCircle className="w-3 h-3 text-rose-400" /> Inactive
+                            </span>
                           )}
                         </span>
                       </td>

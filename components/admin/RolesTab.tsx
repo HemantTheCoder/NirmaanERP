@@ -51,7 +51,7 @@ export function RolesTab() {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-200 mx-auto">
                         <X className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -64,7 +64,7 @@ export function RolesTab() {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-200 mx-auto">
                         <X className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -77,7 +77,7 @@ export function RolesTab() {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-200 mx-auto">
                         <X className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -90,7 +90,7 @@ export function RolesTab() {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-200 mx-auto">
                         <X className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -103,7 +103,7 @@ export function RolesTab() {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-200 mx-auto">
                         <X className="w-3.5 h-3.5" />
                       </span>
                     )}

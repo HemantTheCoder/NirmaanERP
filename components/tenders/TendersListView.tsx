@@ -71,7 +71,7 @@ export function TendersListView({ tenders, projects, user }: TendersListViewProp
   // Calculate deadline countdown helper
   const getDeadlineBadge = (deadlineStr: string, status: string) => {
     if (status === "closed" || status === "awarded" || status === "cancelled") {
-      return { text: "Bidding Closed", color: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" };
+      return { text: "Bidding Closed", color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" };
     }
 
     const now = new Date().getTime();
