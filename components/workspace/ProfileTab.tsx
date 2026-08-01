@@ -284,6 +284,108 @@ export function ProfileTab({ user }: ProfileTabProps) {
           </div>
         </form>
       </div>
+
+      {/* Change Password Card */}
+      <ChangePasswordCard supabase={supabase} />
+    </div>
+  );
+}
+
+function ChangePasswordCard({ supabase }: { supabase: any }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [pwdSuccess, setPwdSuccess] = useState<string | null>(null);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setPwdError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwdError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setPwdError(null);
+    setPwdSuccess(null);
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    setLoading(false);
+
+    if (error) {
+      setPwdError(error.message);
+    } else {
+      setPwdSuccess("Password updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div>
+          <h4 className="text-sm font-bold text-foreground">Security & Password</h4>
+          <p className="text-xs text-muted-foreground">Update your account login password.</p>
+        </div>
+      </div>
+
+      {pwdError && (
+        <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-medium">
+          {pwdError}
+        </div>
+      )}
+
+      {pwdSuccess && (
+        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 text-xs font-medium">
+          {pwdSuccess}
+        </div>
+      )}
+
+      <form onSubmit={handlePasswordChange} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">New Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Confirm New Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all shadow-sm disabled:opacity-60"
+          >
+            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {loading ? "Updating Password…" : "Update Password"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
