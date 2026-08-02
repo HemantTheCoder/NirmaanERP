@@ -96,7 +96,7 @@ export async function getTenders(
       *,
       project:projects(name),
       creator:users!tenders_created_by_fkey(full_name, email),
-      bids:bids(id, contractor_id, status, bid_amount, submitted_at)
+      bids:bids!bids_tender_id_fkey(id, contractor_id, status, bid_amount, submitted_at)
     `)
     .order("created_at", { ascending: false });
 
@@ -299,6 +299,32 @@ export async function updateTender(
 }
 
 // ── SUBMIT BID ───────────────────────────────────────────────────────────────
+
+export async function getContractorBids(
+  supabase: SupabaseClient<Database>,
+  contractorId: string
+): Promise<BidItem[]> {
+  const { data, error } = await (supabase.from("bids") as any)
+    .select(`
+      *,
+      tender:tenders!bids_tender_id_fkey(
+        id,
+        title,
+        status,
+        category,
+        submission_deadline
+      )
+    `)
+    .eq("contractor_id", contractorId)
+    .order("submitted_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching contractor bids:", error);
+    return [];
+  }
+
+  return data as BidItem[];
+}
 
 export async function submitBid(
   supabase: SupabaseClient<Database>,

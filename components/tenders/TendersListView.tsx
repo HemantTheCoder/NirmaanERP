@@ -62,7 +62,14 @@ export function TendersListView({ tenders, projects, user }: TendersListViewProp
     const matchesSearch =
       t.title.toLowerCase().includes(search.toLowerCase()) ||
       (t.project?.name || "").toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    
+    let matchesStatus = true;
+    if (statusFilter === "my_bids") {
+      matchesStatus = t.my_bid !== null;
+    } else if (statusFilter !== "all") {
+      matchesStatus = t.status === statusFilter;
+    }
+
     const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
 
     return matchesSearch && matchesStatus && matchesCategory;
@@ -200,25 +207,26 @@ export function TendersListView({ tenders, projects, user }: TendersListViewProp
             </select>
           </div>
 
-          {/* Status Tabs for Admin/PM */}
-          {isStaff && (
-            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs">
-              {["all", "draft", "published", "closed", "awarded"].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg font-semibold capitalize transition-all",
-                    statusFilter === st
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs">
+            {(isStaff
+              ? ["all", "draft", "published", "closed", "awarded"]
+              : ["all", "my_bids", "published", "awarded"]
+            ).map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg font-semibold capitalize transition-all",
+                  statusFilter === st
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {st === "my_bids" ? "My Submitted Bids" : st}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
