@@ -76,7 +76,7 @@ export default function AboutPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
-      {/* Header Banner */}
+      {/* Header Banner (Left untouched dark block) */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-900/40 via-slate-900/60 to-slate-950 border border-white/10 p-8 shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3">
@@ -102,21 +102,21 @@ export default function AboutPage() {
 
       {/* Core Platform Capabilities Grid */}
       <div className="space-y-4">
-        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
-          <Cpu className="w-5 h-5 text-indigo-400" />
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 tracking-tight">
+          <Cpu className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           Core Platform Capabilities
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {MODULES.map((m) => (
             <div
               key={m.title}
-              className="bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 rounded-xl p-5 transition-all duration-200 shadow-md shadow-black/20"
+              className="bg-card border border-border hover:border-indigo-500/50 rounded-xl p-5 transition-all duration-200 shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 mb-3.5 shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3.5 shadow-xs">
                 <m.icon className="w-5 h-5" />
               </div>
-              <h3 className="text-white font-bold text-sm tracking-tight mb-1.5">{m.title}</h3>
-              <p className="text-slate-200 text-xs leading-relaxed font-normal">{m.desc}</p>
+              <h3 className="text-foreground font-bold text-sm tracking-tight mb-1.5">{m.title}</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed font-normal">{m.desc}</p>
             </div>
           ))}
         </div>
@@ -124,22 +124,22 @@ export default function AboutPage() {
 
       {/* Built With Tech Stack */}
       <div className="space-y-4">
-        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
-          <Layers className="w-5 h-5 text-indigo-400" />
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 tracking-tight">
+          <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           Built With
         </h2>
-        <div className="bg-slate-900/90 border border-white/10 rounded-xl p-6 shadow-md shadow-black/20">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-xs">
           <div className="flex flex-wrap gap-3">
             {TECH_STACK.map((tech) => (
               <div
                 key={tech.name}
-                className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-lg px-3.5 py-2 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2.5 bg-muted/40 border border-border/60 rounded-lg px-3.5 py-2 hover:bg-muted/80 transition-colors"
               >
-                <span className="text-xs font-bold text-indigo-300 bg-indigo-500/25 px-2 py-0.5 rounded border border-indigo-500/40">
+                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                   {tech.category}
                 </span>
-                <span className="text-sm font-bold text-white">{tech.name}</span>
-                <span className="text-xs text-slate-300 font-medium">— {tech.desc}</span>
+                <span className="text-sm font-bold text-foreground">{tech.name}</span>
+                <span className="text-xs text-muted-foreground font-medium">— {tech.desc}</span>
               </div>
             ))}
           </div>
@@ -148,27 +148,27 @@ export default function AboutPage() {
 
       {/* Developed By Section */}
       <div className="space-y-4">
-        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
-          <GraduationCap className="w-5 h-5 text-indigo-400" />
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 tracking-tight">
+          <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           Developed By
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {DEVELOPERS.map((dev) => (
             <div
               key={dev.name}
-              className="bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 rounded-xl p-6 flex flex-col justify-between space-y-4 transition-all duration-200 shadow-md shadow-black/20"
+              className="bg-card border border-border hover:border-indigo-500/50 rounded-xl p-6 flex flex-col justify-between space-y-4 transition-all duration-200 shadow-xs"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <h3 className="text-xl font-extrabold text-white tracking-tight">{dev.name}</h3>
-                  <p className="text-xs text-indigo-300 font-semibold">{dev.role}</p>
+                  <h3 className="text-xl font-extrabold text-foreground tracking-tight">{dev.name}</h3>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{dev.role}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-xs">
                   <LinkedInIcon className="w-5 h-5" />
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-white/10">
+              <div className="pt-2 border-t border-border">
                 <a
                   href={dev.linkedin}
                   target="_blank"
@@ -186,11 +186,11 @@ export default function AboutPage() {
 
       {/* Roles & Capabilities Accordion Section */}
       <div className="space-y-4">
-        <h2 className="text-xl font-extrabold text-white flex items-center gap-2 tracking-tight">
-          <UserCheck className="w-5 h-5 text-indigo-400" />
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 tracking-tight">
+          <UserCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           Roles & Capabilities Overview
         </h2>
-        <p className="text-xs text-slate-300 font-medium">
+        <p className="text-xs text-muted-foreground font-medium">
           Nirmaan ERP enforces fine-grained access control boundaries across 5 specialized system roles. Click any role below to view detailed capabilities and permissions.
         </p>
 
@@ -203,46 +203,46 @@ export default function AboutPage() {
               <div
                 key={r.id}
                 className={cn(
-                  "border rounded-xl transition-all duration-200 overflow-hidden bg-slate-900/90 shadow-md shadow-black/20",
-                  isOpen ? "border-indigo-500/60 shadow-lg shadow-indigo-500/10" : "border-white/10 hover:border-white/20"
+                  "border rounded-xl transition-all duration-200 overflow-hidden bg-card shadow-xs",
+                  isOpen ? "border-indigo-500/60 shadow-md shadow-indigo-500/10" : "border-border hover:border-border/80"
                 )}
               >
                 {/* Accordion Header */}
                 <button
                   type="button"
                   onClick={() => toggleAccordion(r.id)}
-                  className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-white/5 transition-colors"
+                  className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-muted/40 transition-colors"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs">
                       <IconComp className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-extrabold text-white tracking-tight">{r.title}</h3>
+                        <h3 className="text-base font-extrabold text-foreground tracking-tight">{r.title}</h3>
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider", r.badgeStyle)}>
                           {r.badge}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-300 truncate mt-0.5 font-normal">{r.summary}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5 font-normal">{r.summary}</p>
                     </div>
                   </div>
 
-                  <div className="text-slate-300 hover:text-white transition-colors shrink-0">
-                    {isOpen ? <ChevronUp className="w-5 h-5 text-indigo-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                  <div className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                    {isOpen ? <ChevronUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
                   </div>
                 </button>
 
                 {/* Accordion Content */}
                 {isOpen && (
-                  <div className="px-6 pb-5 pt-3 border-t border-white/10 bg-slate-950/60 space-y-3">
-                    <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                  <div className="px-6 pb-5 pt-3 border-t border-border bg-muted/20 space-y-3">
+                    <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                       Authorized Capabilities & System Permissions:
                     </p>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-200">
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-foreground">
                       {r.capabilities.map((cap, i) => (
-                        <li key={i} className="flex items-start gap-2.5 bg-white/5 border border-white/10 rounded-lg p-3">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-2.5 bg-card border border-border/60 rounded-lg p-3">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                           <span className="leading-relaxed font-medium">{cap}</span>
                         </li>
                       ))}
@@ -256,11 +256,11 @@ export default function AboutPage() {
       </div>
 
       {/* Footer Coursework Note */}
-      <div className="text-center pt-8 border-t border-white/10 text-xs text-slate-400">
+      <div className="text-center pt-8 border-t border-border text-xs text-muted-foreground">
         <p>
-          Built as part of <span className="text-slate-200 font-medium">Computer Applications in Construction Management</span> coursework.
+          Built as part of <span className="text-foreground font-medium">Computer Applications in Construction Management</span> coursework.
         </p>
-        <p className="mt-1 text-slate-500">
+        <p className="mt-1 text-muted-foreground/70">
           © 2026 Nirmaan ERP. All rights reserved.
         </p>
       </div>
