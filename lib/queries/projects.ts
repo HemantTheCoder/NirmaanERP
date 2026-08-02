@@ -13,6 +13,9 @@ export interface ProjectWithManager {
   manager_id: string | null;
   client_id: string | null;
   budget_allocated: number | null;
+  site_latitude: number | null;
+  site_longitude: number | null;
+  geofence_radius_meters: number | null;
   created_at: string;
   manager_name?: string | null;
   client_name?: string | null;
@@ -78,6 +81,9 @@ export async function getProjects(
     manager_id: p.manager_id,
     client_id: p.client_id || null,
     budget_allocated: p.budget_allocated ? Number(p.budget_allocated) : null,
+    site_latitude: p.site_latitude ? Number(p.site_latitude) : null,
+    site_longitude: p.site_longitude ? Number(p.site_longitude) : null,
+    geofence_radius_meters: p.geofence_radius_meters ? Number(p.geofence_radius_meters) : 250,
     created_at: p.created_at,
     manager_name: p.users?.full_name || p.users?.email || null,
     client_name: p.client?.full_name || p.client?.email || null,
@@ -227,6 +233,9 @@ export async function createProject(
     manager_id?: string;
     client_id?: string;
     budget_allocated?: number | null;
+    site_latitude?: number | null;
+    site_longitude?: number | null;
+    geofence_radius_meters?: number | null;
   }
 ) {
   const { data, error } = await (supabase.from("projects") as any).insert(payload).select().single();
@@ -248,6 +257,9 @@ export async function updateProject(
     manager_id: string | null;
     client_id: string | null;
     budget_allocated: number | null;
+    site_latitude: number | null;
+    site_longitude: number | null;
+    geofence_radius_meters: number | null;
   }>
 ) {
   const { data, error } = await (supabase.from("projects") as any)

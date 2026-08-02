@@ -12,10 +12,12 @@ import type { AttendanceItem } from "@/lib/queries/attendance";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
+import type { ProjectWithManager } from "@/lib/queries/projects";
+
 interface WorkspaceViewProps {
   initialTasks: TaskWithProject[];
   initialLeaves: LeaveItem[];
-  projects: { id: string; name: string }[];
+  projects: ProjectWithManager[];
   user: {
     id: string;
     email: string;
@@ -125,6 +127,7 @@ export function WorkspaceView({
           userId={user.id}
           initialToday={initialTodayAttendance}
           initialHistory={initialAttendanceHistory}
+          projects={projects}
         />
       )}
 

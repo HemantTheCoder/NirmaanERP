@@ -8,7 +8,15 @@ export interface AttendanceItem {
   check_in: string | null;
   check_out: string | null;
   status: "present" | "absent" | "half_day" | "on_leave" | "late";
+  check_in_latitude?: number | null;
+  check_in_longitude?: number | null;
+  check_in_within_geofence?: boolean | null;
+  check_in_distance_meters?: number | null;
   created_at: string;
+  user?: {
+    full_name: string | null;
+    email: string;
+  } | null;
 }
 
 function getTodayString(): string {
@@ -64,13 +72,17 @@ export async function getMyAttendance(
 }
 
 /**
- * Record check-in timestamp for today.
- * The database BEFORE INSERT trigger trg_set_attendance_status automatically
- * computes status ('present' vs 'late' based on 9:30 AM cutoff).
+ * Record check-in timestamp for today with optional geofence audit data.
  */
 export async function checkIn(
   supabase: SupabaseClient<Database>,
-  userId: string
+  userId: string,
+  geofenceData?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    withinGeofence?: boolean | null;
+    distanceMeters?: number | null;
+  }
 ): Promise<{ success: boolean; attendance?: AttendanceItem; error?: string }> {
   const todayStr = getTodayString();
 
@@ -82,12 +94,21 @@ export async function checkIn(
 
   // 2. Insert check-in record
   const nowIso = new Date().toISOString();
+  const insertPayload: any = {
+    user_id: userId,
+    date: todayStr,
+    check_in: nowIso,
+  };
+
+  if (geofenceData) {
+    if (geofenceData.latitude !== undefined) insertPayload.check_in_latitude = geofenceData.latitude;
+    if (geofenceData.longitude !== undefined) insertPayload.check_in_longitude = geofenceData.longitude;
+    if (geofenceData.withinGeofence !== undefined) insertPayload.check_in_within_geofence = geofenceData.withinGeofence;
+    if (geofenceData.distanceMeters !== undefined) insertPayload.check_in_distance_meters = geofenceData.distanceMeters;
+  }
+
   const { data, error } = await (supabase.from("attendance") as any)
-    .insert({
-      user_id: userId,
-      date: todayStr,
-      check_in: nowIso,
-    })
+    .insert(insertPayload)
     .select("*")
     .single();
 
@@ -99,17 +120,25 @@ export async function checkIn(
 }
 
 /**
- * Record check-out timestamp for today's attendance record
+ * Record check-out timestamp for today.
  */
 export async function checkOut(
   supabase: SupabaseClient<Database>,
-  attendanceId: string
+  userId: string
 ): Promise<{ success: boolean; attendance?: AttendanceItem; error?: string }> {
-  const nowIso = new Date().toISOString();
+  const todayRecord = await getTodayAttendance(supabase, userId);
+  if (!todayRecord) {
+    return { success: false, error: "No check-in record found for today. Please check in first." };
+  }
 
+  if (todayRecord.check_out) {
+    return { success: false, error: "You have already checked out for today." };
+  }
+
+  const nowIso = new Date().toISOString();
   const { data, error } = await (supabase.from("attendance") as any)
     .update({ check_out: nowIso })
-    .eq("id", attendanceId)
+    .eq("id", todayRecord.id)
     .select("*")
     .single();
 

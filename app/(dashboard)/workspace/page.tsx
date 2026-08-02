@@ -50,16 +50,11 @@ export default async function WorkspacePage() {
     getMyAttendance(supabase, user.id, 30),
   ]);
 
-  const projectOptions = projects.map((p) => ({
-    id: p.id,
-    name: p.name,
-  }));
-
   return (
     <WorkspaceView
       initialTasks={tasks}
       initialLeaves={leaves}
-      projects={projectOptions}
+      projects={projects}
       user={userProfile}
       initialTodayAttendance={todayAttendance}
       initialAttendanceHistory={attendanceHistory}
