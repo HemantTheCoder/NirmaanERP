@@ -831,6 +831,49 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
             </div>
           </div>
         )}
+
+        {/* Card 9: Quality Control & Open Punch Items */}
+        {data.punchListMetrics && (
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card lg:col-span-2">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center">
+                  <Target className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Quality Control & Punch List Defect Summary</h3>
+                  <p className="text-xs text-muted-foreground">Site quality snagging, open remediation items, and defect severity levels</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2">
+              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
+                <p className="text-xs font-semibold text-muted-foreground">Total Logged Snags</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{data.punchListMetrics.totalCount}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Project QA Register</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+                <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Open Defect Snags</p>
+                <p className="text-3xl font-bold text-rose-600 dark:text-rose-400 mt-1">{data.punchListMetrics.openCount}</p>
+                <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 mt-1">Awaiting Remediation</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Major Severity Defects</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">{data.punchListMetrics.majorCount}</p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-1">High Priority Rework</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Resolved & Verified</p>
+                <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{data.punchListMetrics.resolvedCount}</p>
+                <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80 mt-1">Passed QA Inspection</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,16 +13,19 @@ import {
   Package,
   Folder,
   IndianRupee,
+  AlertOctagon,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
 import { ProjectResourcesView } from "@/components/projects/ProjectResourcesView";
 import { ProjectDocumentsView } from "@/components/projects/ProjectDocumentsView";
 import { ProjectBudgetView } from "@/components/projects/ProjectBudgetView";
+import { PunchListView } from "@/components/projects/PunchListView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
 import type { ResourceAllocationItem } from "@/lib/queries/resources";
 import type { ProjectDocumentItem } from "@/lib/queries/documents";
 import type { ProjectBudgetSummary } from "@/lib/queries/finance";
+import type { PunchItem } from "@/lib/queries/punch_list";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +43,8 @@ interface ProjectDetailViewProps {
   initialResources: ResourceAllocationItem[];
   initialDocuments: ProjectDocumentItem[];
   initialBudgetSummary: ProjectBudgetSummary;
+  initialPunchItems: PunchItem[];
+  teamMembers?: any[];
   userId: string;
   userRole: UserRole;
 }
@@ -50,11 +55,13 @@ export function ProjectDetailView({
   initialResources,
   initialDocuments,
   initialBudgetSummary,
+  initialPunchItems,
+  teamMembers = [],
   userId,
   userRole,
 }: ProjectDetailViewProps) {
   const [tasks, setTasks] = useState<any[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -206,6 +213,19 @@ export function ProjectDetailView({
               <IndianRupee className="w-3.5 h-3.5 text-emerald-600" />
               Budget & Expenses
             </button>
+
+            <button
+              onClick={() => setActiveTab("punch_list")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "punch_list"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <AlertOctagon className="w-3.5 h-3.5 text-rose-500" />
+              Punch List ({initialPunchItems.length})
+            </button>
           </div>
         </div>
 
@@ -310,6 +330,16 @@ export function ProjectDetailView({
             projectId={project.id}
             initialSummary={initialBudgetSummary}
             user={{ id: userId, role: userRole }}
+          />
+        )}
+
+        {/* Tab 6: Punch List */}
+        {activeTab === "punch_list" && (
+          <PunchListView
+            projectId={project.id}
+            initialItems={initialPunchItems}
+            user={{ id: userId, role: userRole }}
+            teamMembers={teamMembers}
           />
         )}
       </div>

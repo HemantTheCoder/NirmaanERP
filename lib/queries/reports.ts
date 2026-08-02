@@ -56,6 +56,14 @@ export interface ResourceUtilizationData {
   totalActiveCount: number;
 }
 
+export interface PunchListMetricsData {
+  totalCount: number;
+  openCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+  majorCount: number;
+}
+
 export interface ReportsAggregateData {
   projectStatus: ProjectStatusItem[];
   completionTrend: TaskCompletionTrendItem[];
@@ -66,6 +74,7 @@ export interface ReportsAggregateData {
   onTimeCompletion: OnTimeCompletionRateData;
   ppcTrend: PpcTrendItem[];
   resourceUtilization: ResourceUtilizationData;
+  punchListMetrics?: PunchListMetricsData;
 }
 
 const STATUS_COLOR_MAP: Record<string, { label: string; color: string }> = {
@@ -339,6 +348,36 @@ export async function getReportsData(
     totalActiveCount,
   };
 
+  // ── 8. Quality Control & Punch List Metrics ──────────────────────────────────
+  const punchQuery = (supabase.from("punch_items") as any).select("status, severity, project_id");
+  if (projectId) {
+    punchQuery.eq("project_id", projectId);
+  }
+
+  const { data: punchRaw } = await punchQuery;
+  const punchList = punchRaw || [];
+
+  let punchOpen = 0;
+  let punchInProgress = 0;
+  let punchResolved = 0;
+  let punchMajor = 0;
+
+  punchList.forEach((p: any) => {
+    if (p.status === "open") punchOpen++;
+    else if (p.status === "in_progress") punchInProgress++;
+    else if (p.status === "resolved" || p.status === "verified") punchResolved++;
+
+    if (p.severity === "major") punchMajor++;
+  });
+
+  const punchListMetrics: PunchListMetricsData = {
+    totalCount: punchList.length,
+    openCount: punchOpen,
+    inProgressCount: punchInProgress,
+    resolvedCount: punchResolved,
+    majorCount: punchMajor,
+  };
+
   return {
     projectStatus,
     completionTrend,
@@ -349,5 +388,6 @@ export async function getReportsData(
     onTimeCompletion,
     ppcTrend,
     resourceUtilization,
+    punchListMetrics,
   };
 }
