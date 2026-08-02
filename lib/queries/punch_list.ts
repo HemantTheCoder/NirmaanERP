@@ -81,21 +81,20 @@ export async function uploadPunchPhoto(
 
   const fileExt = file.name.split(".").pop() || "jpg";
   const fileName = `punch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-  const filePath = `punch-photos/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("project-documents")
-    .upload(filePath, file, { cacheControl: "3600", upsert: true });
+    .from("punch-photos")
+    .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
   if (uploadError) {
     console.warn("Storage upload notice:", uploadError.message);
   }
 
   const { data: publicUrlData } = supabase.storage
-    .from("project-documents")
-    .getPublicUrl(filePath);
+    .from("punch-photos")
+    .getPublicUrl(fileName);
 
-  return { publicUrl: publicUrlData?.publicUrl || filePath };
+  return { publicUrl: publicUrlData?.publicUrl || fileName };
 }
 
 /**

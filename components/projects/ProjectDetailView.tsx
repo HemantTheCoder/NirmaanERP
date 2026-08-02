@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,6 +16,7 @@ import {
   IndianRupee,
   AlertOctagon,
   FileCheck2,
+  Plus,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
@@ -24,6 +26,7 @@ import { ProjectBudgetView } from "@/components/projects/ProjectBudgetView";
 import { PunchListView } from "@/components/projects/PunchListView";
 import { DailyProgressReportView } from "@/components/projects/DailyProgressReportView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
+import { CreateTaskModal } from "@/components/projects/CreateTaskModal";
 import type { ResourceAllocationItem } from "@/lib/queries/resources";
 import type { ProjectDocumentItem } from "@/lib/queries/documents";
 import type { ProjectBudgetSummary } from "@/lib/queries/finance";
@@ -67,11 +70,14 @@ export function ProjectDetailView({
   userId,
   userRole,
 }: ProjectDetailViewProps) {
+  const router = useRouter();
+
   const [tasks, setTasks] = useState<any[]>(initialTasks);
   const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
 
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.status === "done").length;
@@ -81,6 +87,12 @@ export function ProjectDetailView({
     setTasks((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...updatedTask } : t))
     );
+    router.refresh();
+  };
+
+  const handleTaskCreated = (newTask: any) => {
+    setTasks((prev) => [newTask, ...prev]);
+    router.refresh();
   };
 
   return (
@@ -104,6 +116,14 @@ export function ProjectDetailView({
               {project.description || "No description provided."}
             </p>
           </div>
+
+          <button
+            onClick={() => setIsCreateTaskModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Add Task
+          </button>
         </div>
       </div>
 
@@ -257,7 +277,7 @@ export function ProjectDetailView({
                 <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-sm font-medium text-foreground">No tasks assigned to this project yet.</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Add tasks from My Workspace or assign work packages.
+                  Click &quot;Add Task&quot; above to create the first work package.
                 </p>
               </div>
             ) : (
@@ -319,6 +339,7 @@ export function ProjectDetailView({
         {/* Tab 2: Timeline (Gantt Chart) */}
         {activeTab === "timeline" && (
           <ProjectGanttChart
+            projectName={project.name}
             tasks={tasks}
             onTaskClick={(task) => setSelectedTask(task)}
           />
@@ -380,6 +401,15 @@ export function ProjectDetailView({
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onUpdateSuccess={handleTaskUpdate}
+      />
+
+      {/* Create Task Modal */}
+      <CreateTaskModal
+        projectId={project.id}
+        isOpen={isCreateTaskModalOpen}
+        onClose={() => setIsCreateTaskModalOpen(false)}
+        onTaskCreated={handleTaskCreated}
+        teamMembers={teamMembers}
       />
     </div>
   );
