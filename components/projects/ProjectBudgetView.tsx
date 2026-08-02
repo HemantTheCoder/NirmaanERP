@@ -303,119 +303,123 @@ export function ProjectBudgetView({
         </button>
       </div>
 
-      {/* Financial KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Allocated Budget */}
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs">
-          <p className="text-xs font-medium text-muted-foreground">Allocated Budget</p>
-          <p className="text-2xl font-bold text-foreground mt-1">
-            {formatCurrency(summary.budgetAllocated)}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {summary.budgetAllocated ? "Approved baseline financial cap" : "Budget cap not configured"}
-          </p>
-        </div>
-
-        {/* Total Approved Spend */}
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs">
-          <p className="text-xs font-medium text-muted-foreground">Approved Actual Spend</p>
-          <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-            {formatCurrency(summary.totalApprovedSpend)}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {summary.totalPendingSpend > 0 ? `+ ₹${summary.totalPendingSpend.toLocaleString("en-IN")} pending approval` : "All logged expenses processed"}
-          </p>
-        </div>
-
-        {/* Remaining Budget / Variance */}
-        <div
-          className={cn(
-            "bg-card border rounded-2xl p-4 shadow-xs",
-            isOverBudget ? "border-rose-300 dark:border-rose-800 bg-rose-50/20 dark:bg-rose-950/20" : "border-border"
-          )}
-        >
-          <p className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-            <span>Remaining Budget</span>
-            {isOverBudget && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                OVER BUDGET
-              </span>
-            )}
-          </p>
-          <p
-            className={cn(
-              "text-2xl font-bold mt-1",
-              isOverBudget ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-            )}
-          >
-            {formatCurrency(summary.remainingBudget)}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {summary.remainingBudget !== null
-              ? isOverBudget
-                ? `Exceeds allocated cap by ₹${Math.abs(summary.remainingBudget).toLocaleString("en-IN")}`
-                : "Available allocation remaining"
-              : "Set project budget to enable cap tracking"}
-          </p>
-        </div>
-
-        {/* Budget Utilization % */}
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Budget Utilization</p>
-              <span className="text-xs font-bold text-foreground">{pct}%</span>
+      {/* Financial KPI Summary Cards (Admin & PM only) */}
+      {isStaff && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Allocated Budget */}
+            <div className="bg-card border border-border rounded-2xl p-4 shadow-xs">
+              <p className="text-xs font-medium text-muted-foreground">Allocated Budget</p>
+              <p className="text-2xl font-bold text-foreground mt-1">
+                {formatCurrency(summary.budgetAllocated)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {summary.budgetAllocated ? "Approved baseline financial cap" : "Budget cap not configured"}
+              </p>
             </div>
-            <div className="w-full bg-secondary h-2.5 rounded-full mt-2.5 overflow-hidden">
-              <div
-                className={cn("h-full transition-all duration-500 rounded-full", progressBarColor)}
-                style={{ width: `${Math.min(100, pct)}%` }}
-              />
+
+            {/* Total Approved Spend */}
+            <div className="bg-card border border-border rounded-2xl p-4 shadow-xs">
+              <p className="text-xs font-medium text-muted-foreground">Approved Actual Spend</p>
+              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                {formatCurrency(summary.totalApprovedSpend)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {summary.totalPendingSpend > 0 ? `+ ₹${summary.totalPendingSpend.toLocaleString("en-IN")} pending approval` : "All logged expenses processed"}
+              </p>
+            </div>
+
+            {/* Remaining Budget / Variance */}
+            <div
+              className={cn(
+                "bg-card border rounded-2xl p-4 shadow-xs",
+                isOverBudget ? "border-rose-300 dark:border-rose-800 bg-rose-50/20 dark:bg-rose-950/20" : "border-border"
+              )}
+            >
+              <p className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                <span>Remaining Budget</span>
+                {isOverBudget && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                    OVER BUDGET
+                  </span>
+                )}
+              </p>
+              <p
+                className={cn(
+                  "text-2xl font-bold mt-1",
+                  isOverBudget ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                )}
+              >
+                {formatCurrency(summary.remainingBudget)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {summary.remainingBudget !== null
+                  ? isOverBudget
+                    ? `Exceeds allocated cap by ₹${Math.abs(summary.remainingBudget).toLocaleString("en-IN")}`
+                    : "Available allocation remaining"
+                  : "Set project budget to enable cap tracking"}
+              </p>
+            </div>
+
+            {/* Budget Utilization % */}
+            <div className="bg-card border border-border rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Budget Utilization</p>
+                  <span className="text-xs font-bold text-foreground">{pct}%</span>
+                </div>
+                <div className="w-full bg-secondary h-2.5 rounded-full mt-2.5 overflow-hidden">
+                  <div
+                    className={cn("h-full transition-all duration-500 rounded-full", progressBarColor)}
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {pct >= 100
+                  ? "Critical: Project has exceeded 100% budget"
+                  : pct >= 80
+                  ? "Warning: Budget utilization above 80%"
+                  : "Financial burn rate within normal limits"}
+              </p>
             </div>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            {pct >= 100
-              ? "Critical: Project has exceeded 100% budget"
-              : pct >= 80
-              ? "Warning: Budget utilization above 80%"
-              : "Financial burn rate within normal limits"}
-          </p>
-        </div>
-      </div>
 
-      {/* Category Spend Breakdown Chart */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <PieIcon className="w-4 h-4 text-indigo-500" />
-            <h3 className="text-sm font-bold text-foreground">Approved Spend by Trade Category</h3>
+          {/* Category Spend Breakdown Chart */}
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <PieIcon className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-foreground">Approved Spend by Trade Category</h3>
+              </div>
+              <span className="text-xs text-muted-foreground">Approved Expenses Only</span>
+            </div>
+
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                  <Tooltip
+                    formatter={(val: any) => [`₹${Number(val).toLocaleString("en-IN")}`, "Approved Spend"]}
+                    contentStyle={{
+                      backgroundColor: "var(--card)",
+                      borderColor: "var(--border)",
+                      borderRadius: "0.75rem",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <span className="text-xs text-muted-foreground">Approved Expenses Only</span>
-        </div>
-
-        <div className="h-48 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-              <Tooltip
-                formatter={(val: any) => [`₹${Number(val).toLocaleString("en-IN")}`, "Approved Spend"]}
-                contentStyle={{
-                  backgroundColor: "var(--card)",
-                  borderColor: "var(--border)",
-                  borderRadius: "0.75rem",
-                  fontSize: "12px",
-                }}
-              />
-              <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Expenses List Table */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs space-y-4 p-5">

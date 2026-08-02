@@ -65,13 +65,17 @@ export async function getProjectBudgetSummary(
   userId: string,
   role: UserRole
 ): Promise<ProjectBudgetSummary> {
-  // 1. Fetch project budget_allocated
-  const { data: projData } = await (supabase.from("projects") as any)
-    .select("budget_allocated")
-    .eq("id", projectId)
-    .single();
+  // 1. Fetch project budget_allocated (Admin / PM only)
+  const isStaff = role === "admin" || role === "project_manager";
 
-  const budgetAllocated = projData?.budget_allocated
+  const { data: projData } = isStaff
+    ? await (supabase.from("projects") as any)
+        .select("budget_allocated")
+        .eq("id", projectId)
+        .single()
+    : { data: null };
+
+  const budgetAllocated = isStaff && projData?.budget_allocated
     ? Number(projData.budget_allocated)
     : null;
 
