@@ -23,13 +23,14 @@ export default async function ApprovalsPage() {
     redirect("/login");
   }
 
-  // Fetch caller's profile role
+  // Fetch caller's profile role and full name
   const { data: profile } = await (supabase.from("users") as any)
-    .select("role")
+    .select("role, full_name, email")
     .eq("id", user.id)
     .single();
 
   const role = (profile?.role ?? "site_staff") as UserRole;
+  const fullName = profile?.full_name || profile?.email || "Manager";
 
   // Strict Access Control: Admin or Project Manager only
   if (role !== "admin" && role !== "project_manager") {
@@ -46,6 +47,7 @@ export default async function ApprovalsPage() {
       initialPending={pending}
       initialHistory={history}
       currentUserId={user.id}
+      currentUserFullName={fullName}
     />
   );
 }

@@ -13,6 +13,8 @@ import {
   type TenderDocumentItem,
   type BidItem,
 } from "@/lib/queries/tenders";
+import { createSignatureAcknowledgment, type SignatureAcknowledgment } from "@/lib/queries/signatures";
+import { SignatureConfirmModal } from "@/components/shared/SignatureConfirmModal";
 import type { UserRole, BidStatus } from "@/types/database";
 import {
   ArrowLeft,
@@ -44,9 +46,11 @@ interface TenderDetailViewProps {
   tender: TenderItem;
   documents: TenderDocumentItem[];
   bids: BidItem[];
+  initialSignature?: SignatureAcknowledgment | null;
   user: {
     id: string;
     role: UserRole;
+    full_name?: string;
   };
 }
 
@@ -73,6 +77,7 @@ export function TenderDetailView({
   tender,
   documents,
   bids,
+  initialSignature = null,
   user,
 }: TenderDetailViewProps) {
   const router = useRouter();
@@ -175,15 +180,44 @@ export function TenderDetailView({
   };
 
   // Award Bid Handler
-  const handleAwardContract = async () => {
+  // Digital Signature Modal State
+  const [showAwardSignatureModal, setShowAwardSignatureModal] = useState(false);
+  const [signature, setSignature] = useState<SignatureAcknowledgment | null>(initialSignature);
+
+  // Trigger Digital Signature Confirmation Modal
+  const handleAwardContract = () => {
     if (!selectedBid) return;
+    setShowAwardSignatureModal(true);
+  };
+
+  // Execute Award after Digital Signature Confirmation
+  const executeAwardWithSignature = async (typedName: string) => {
+    if (!selectedBid) return;
+
     setIsProcessingAction(true);
 
+    // 1. Record Digital Signature Audit Acknowledgment
+    const sigRes = await createSignatureAcknowledgment(
+      supabase,
+      {
+        action_type: "tender_award",
+        reference_id: tender.id,
+        typed_name: typedName,
+      },
+      user.id
+    );
+
+    if (sigRes.data) {
+      setSignature(sigRes.data);
+    }
+
+    // 2. Perform actual Award Bid database mutation
     await awardBid(supabase, tender.id, selectedBid.id, user.id, reviewNotes);
 
     setIsProcessingAction(false);
     setSelectedBid(null);
     setReviewNotes("");
+    setShowAwardSignatureModal(false);
     router.refresh();
   };
 
@@ -233,6 +267,18 @@ export function TenderDetailView({
                 <Building2 className="w-4 h-4 text-indigo-500" />
                 Linked Project: <span className="font-semibold text-foreground">{tender.project.name}</span>
               </p>
+            )}
+
+            {/* Digital Signature Audit Acknowledgment Badge */}
+            {tender.status === "awarded" && (
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  Awarded by{" "}
+                  <strong>{signature?.typed_name || signature?.signer?.full_name || tender.creator?.full_name || "Manager"}</strong>
+                  {signature?.signed_at ? ` on ${new Date(signature.signed_at).toLocaleDateString("en-IN")}` : ""} (Digital Signature Verified)
+                </span>
+              </div>
             )}
           </div>
 
@@ -808,6 +854,17 @@ export function TenderDetailView({
           </div>
         </div>
       )}
+
+      {/* REUSABLE DIGITAL SIGNATURE CONFIRMATION MODAL */}
+      <SignatureConfirmModal
+        isOpen={showAwardSignatureModal}
+        onClose={() => setShowAwardSignatureModal(false)}
+        onConfirm={executeAwardWithSignature}
+        actionTitle="Confirm Trade Contract Award"
+        summaryText={`You are awarding Tender "${tender.title}" to ${selectedBid?.contractor?.full_name || "selected contractor"} for ₹${selectedBid?.bid_amount.toLocaleString("en-IN") || 0}.`}
+        signerFullName={user.full_name || "Manager"}
+        confirmButtonText="Confirm & Digitally Sign Award"
+      />
     </div>
   );
 }

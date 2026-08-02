@@ -17,10 +17,13 @@ import {
   FileSpreadsheet,
   FileCode,
   File,
+  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { approveProjectProgress, type ClientProjectItem } from "@/lib/queries/client";
 import { getDocumentSignedUrl, type ProjectDocumentItem } from "@/lib/queries/documents";
+import { createSignatureAcknowledgment } from "@/lib/queries/signatures";
+import { SignatureConfirmModal } from "@/components/shared/SignatureConfirmModal";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import type { UpcomingMeetingItem } from "@/lib/queries/meetings";
@@ -49,47 +52,63 @@ function getFileIcon(fileName: string, mimeType: string) {
   if (["xlsx", "xls", "csv"].includes(ext) || mimeType.includes("sheet")) {
     return <FileSpreadsheet className="w-4 h-4 text-emerald-500" />;
   }
-  if (ext === "dwg" || ext === "cad") {
-    return <FileCode className="w-4 h-4 text-violet-500" />;
+  if (["zip", "dwg", "autocad"].includes(ext)) {
+    return <FileCode className="w-4 h-4 text-amber-500" />;
   }
-
-  return <File className="w-4 h-4 text-amber-500" />;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return <File className="w-4 h-4 text-slate-500" />;
 }
 
 export function ClientPortalView({
   user,
-  projects,
+  projects: initialProjects,
   initialDocuments,
   meetings,
 }: ClientPortalViewProps) {
   const supabase = createClient();
+  const [projectList, setProjectList] = useState<ClientProjectItem[]>(initialProjects);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(
+    initialProjects[0]?.id || ""
+  );
 
-  const [projectList, setProjectList] = useState<ClientProjectItem[]>(projects);
-  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [approvingProjectId, setApprovingProjectId] = useState<string | null>(null);
+  const [showSigModal, setShowSigModal] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const activeProject = projectList[0] || null;
+  const activeProject = projectList.find((p) => p.id === selectedProjectId) || projectList[0];
 
-  const handleApproveMilestone = async (project: ClientProjectItem) => {
-    setApprovingProjectId(project.id);
+  const triggerApproveMilestone = () => {
+    if (!activeProject) return;
+    setShowSigModal(true);
+  };
+
+  const handleExecuteApproveWithSignature = async (typedName: string) => {
+    if (!activeProject) return;
+    setApprovingProjectId(activeProject.id);
     setErrorMsg(null);
 
-    const res = await approveProjectProgress(supabase, project.id);
+    // 1. Record Digital Signature Audit Acknowledgment
+    await createSignatureAcknowledgment(
+      supabase,
+      {
+        action_type: "client_milestone",
+        reference_id: activeProject.id,
+        typed_name: typedName,
+      },
+      user.id
+    );
+
+    // 2. Perform actual Milestone Sign-off database mutation
+    const res = await approveProjectProgress(supabase, activeProject.id);
     setApprovingProjectId(null);
+    setShowSigModal(false);
 
     if (!res.success) {
       setErrorMsg(res.error || "Failed to sign off milestone.");
     } else {
       setProjectList((prev) =>
         prev.map((p) =>
-          p.id === project.id
+          p.id === activeProject.id
             ? { ...p, client_approved: true, client_approved_at: res.approvedAt || new Date().toISOString() }
             : p
         )
@@ -113,8 +132,8 @@ export function ClientPortalView({
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-950 text-white p-8 border border-indigo-800/40 shadow-xl">
+      {/* Client Portal Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-8 shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
@@ -165,67 +184,62 @@ export function ClientPortalView({
             <div className="shrink-0">
               {activeProject.client_approved ? (
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 shadow-xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    Approved on{" "}
+                    Approved by {user.full_name || "Client"} on{" "}
                     {new Date(activeProject.client_approved_at!).toLocaleDateString("en-IN", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
-                    })}
+                    })}{" "}
+                    (Digitally Signed)
                   </span>
                 </div>
               ) : (
                 <button
-                  onClick={() => handleApproveMilestone(activeProject)}
-                  disabled={approvingProjectId === activeProject.id}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md"
+                  onClick={triggerApproveMilestone}
+                  disabled={!!approvingProjectId}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-60"
                 >
-                  {approvingProjectId === activeProject.id ? (
+                  {approvingProjectId ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  Approve Progress Milestone
+                  Approve Project Milestone
                 </button>
               )}
             </div>
           </div>
 
-          {/* Key Metrics Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-secondary/50 border border-border flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
-                <UserCheck className="w-5 h-5" />
-              </div>
+          {/* Project Details Meta */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="bg-muted/30 p-3.5 rounded-xl border border-border flex items-center gap-3">
+              <UserCheck className="w-5 h-5 text-indigo-500" />
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Assigned PM</p>
-                <p className="text-sm font-bold text-foreground mt-0.5">{activeProject.manager_name || "Unassigned"}</p>
+                <span className="text-muted-foreground block text-[11px]">Assigned Manager</span>
+                <span className="font-semibold text-foreground">{activeProject.manager_name || "Unassigned"}</span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-secondary/50 border border-border flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5" />
-              </div>
+            <div className="bg-muted/30 p-3.5 rounded-xl border border-border flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-emerald-500" />
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Schedule Timeline</p>
-                <p className="text-sm font-bold text-foreground mt-0.5">
+                <span className="text-muted-foreground block text-[11px]">Schedule Window</span>
+                <span className="font-semibold text-foreground">
                   {activeProject.start_date || "N/A"} → {activeProject.end_date || "N/A"}
-                </p>
+                </span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-secondary/50 border border-border flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-950/60 text-violet-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
+            <div className="bg-muted/30 p-3.5 rounded-xl border border-border flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-violet-500" />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">Site Progress</p>
-                  <span className="text-xs font-bold text-foreground">{activeProject.progress_pct}%</span>
+                  <span className="text-muted-foreground text-[11px]">Progress Rate</span>
+                  <span className="font-bold text-foreground">{activeProject.progress_pct}%</span>
                 </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden mt-1.5 border border-border/40">
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden mt-1">
                   <div
                     className="h-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${activeProject.progress_pct}%` }}
@@ -234,142 +248,79 @@ export function ClientPortalView({
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground shadow-sm">
-          <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-bold text-foreground">No Linked Project Assigned</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Contact your Nirmaan ERP Administrator to link your client account to your project.
-          </p>
-        </div>
-      )}
 
-      {/* Project Timeline (Read-Only Gantt) */}
-      {activeProject && (
-        <div className="space-y-3">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <GanttChart className="w-4.5 h-4.5 text-indigo-600" />
-            Project Schedule & Work Package Timeline
-          </h3>
-
-          <ProjectGanttChart tasks={activeProject.tasks} />
-        </div>
-      )}
-
-      {/* Shared Documents Table (Contracts Excluded) */}
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div>
-            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-              <FileText className="w-4.5 h-4.5 text-indigo-500" />
-              Shared Site Drawings & Reports
+          {/* Interactive Gantt Timeline */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <GanttChart className="w-4 h-4 text-indigo-500" /> Live Schedule & Work Breakdown
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Architectural blueprints, site progress photos, and quality inspection reports.
-            </p>
+            <ProjectGanttChart tasks={activeProject.tasks} />
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-secondary/50 border-b border-border text-muted-foreground uppercase tracking-wider font-semibold">
-              <tr>
-                <th className="px-5 py-3.5">Document File</th>
-                <th className="px-5 py-3.5">Category</th>
-                <th className="px-5 py-3.5">Size</th>
-                <th className="px-5 py-3.5">Uploaded Date</th>
-                <th className="px-5 py-3.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {initialDocuments.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No shared drawings or reports uploaded for this project yet.
-                  </td>
-                </tr>
-              ) : (
-                initialDocuments.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-muted/40 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                          {getFileIcon(doc.file_name, doc.file_type)}
-                        </div>
-                        <span className="font-semibold text-foreground">{doc.file_name}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-3.5 capitalize font-medium text-muted-foreground">
-                      {doc.category}
-                    </td>
-
-                    <td className="px-5 py-3.5 font-medium text-foreground">
-                      {formatFileSize(doc.file_size)}
-                    </td>
-
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      {new Date(doc.created_at).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => handleDownloadDoc(doc)}
-                        disabled={downloadingDocId === doc.id}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-950/80 transition-all border border-indigo-200 dark:border-indigo-800"
-                      >
-                        {downloadingDocId === doc.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Download className="w-3.5 h-3.5" />
-                        )}
-                        Download
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      ) : (
+        <div className="text-center py-12 bg-card border border-border rounded-2xl">
+          <Building2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-foreground">No active client projects linked.</p>
         </div>
-      </div>
+      )}
 
-      {/* Upcoming Client Meetings */}
-      {meetings.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <Calendar className="w-4.5 h-4.5 text-emerald-600" />
-            Upcoming Client Review Meetings
-          </h3>
+      {/* Project Documents & Blueprints Vault */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <FolderOpen className="w-4 h-4 text-indigo-500" /> Approved Project Drawings & Contract Vault
+        </h3>
 
-          <div className="divide-y divide-border">
-            {meetings.map((m) => (
-              <div key={m.id} className="py-3 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-sm text-foreground">{m.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(m.start_time).toLocaleDateString("en-IN", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+        {initialDocuments.length === 0 ? (
+          <div className="text-center py-8 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+            No public contract documents uploaded for this project.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {initialDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between p-3 bg-secondary/40 border border-border rounded-xl text-xs hover:border-indigo-500/50 transition-all group"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  {getFileIcon(doc.file_name, doc.file_type || "")}
+                  <div className="min-w-0">
+                    <p className="font-bold text-foreground truncate group-hover:text-indigo-600 transition-colors">
+                      {doc.file_name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {(doc.file_size / 1024).toFixed(1)} KB • {doc.category}
+                    </p>
+                  </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  Confirmed
-                </span>
+
+                <button
+                  onClick={() => handleDownloadDoc(doc)}
+                  disabled={downloadingDocId === doc.id}
+                  className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg transition-all shrink-0"
+                  title="Download Document"
+                >
+                  {downloadingDocId === doc.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Reusable Digital Signature Modal for Client Sign-off */}
+      <SignatureConfirmModal
+        isOpen={showSigModal}
+        onClose={() => setShowSigModal(false)}
+        onConfirm={handleExecuteApproveWithSignature}
+        actionTitle="Confirm Project Milestone Sign-Off"
+        summaryText={`You are approving completed milestone sign-off for Project "${activeProject?.name || "Project"}".`}
+        signerFullName={user.full_name || user.email}
+        confirmButtonText="Confirm & Digitally Sign Approval"
+      />
     </div>
   );
 }

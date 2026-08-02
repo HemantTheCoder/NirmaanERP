@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, XCircle, Clock, Check, X, AlertTriangle, Loader2, History } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Check, X, AlertTriangle, Loader2, History, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateLeaveStatus, type LeaveItem } from "@/lib/queries/leaves";
+import { createSignatureAcknowledgment } from "@/lib/queries/signatures";
+import { SignatureConfirmModal } from "@/components/shared/SignatureConfirmModal";
 import { cn } from "@/lib/utils";
 
 interface ApprovalsViewProps {
   initialPending: LeaveItem[];
   initialHistory: LeaveItem[];
   currentUserId: string;
+  currentUserFullName?: string;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
@@ -19,7 +22,12 @@ const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string }> =
   unpaid: { label: "Unpaid Leave", bg: "bg-amber-100 dark:bg-amber-950/60",   text: "text-amber-800 dark:text-amber-300" },
 };
 
-export function ApprovalsView({ initialPending, initialHistory, currentUserId }: ApprovalsViewProps) {
+export function ApprovalsView({
+  initialPending,
+  initialHistory,
+  currentUserId,
+  currentUserFullName = "Manager",
+}: ApprovalsViewProps) {
   const supabase = createClient();
 
   const [pendingLeaves, setPendingLeaves] = useState<LeaveItem[]>(initialPending);
@@ -28,6 +36,9 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Digital Signature Modal state for Leave Approval
+  const [leaveToApprove, setLeaveToApprove] = useState<LeaveItem | null>(null);
 
   // Reject Modal state
   const [leaveToReject, setLeaveToReject] = useState<LeaveItem | null>(null);
@@ -41,34 +52,51 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
     return diff > 0 ? diff : 1;
   };
 
-  const handleApprove = async (leave: LeaveItem) => {
-    setActionLoadingId(leave.id);
+  const handleExecuteApproveWithSignature = async (typedName: string) => {
+    if (!leaveToApprove) return;
+
+    setActionLoadingId(leaveToApprove.id);
     setErrorMsg(null);
 
+    // 1. Record Digital Signature Audit Acknowledgment
+    await createSignatureAcknowledgment(
+      supabase,
+      {
+        action_type: "leave_approval",
+        reference_id: leaveToApprove.id,
+        typed_name: typedName,
+      },
+      currentUserId
+    );
+
+    // 2. Update Leave Status
     const res = await updateLeaveStatus(supabase, {
-      leaveId: leave.id,
+      leaveId: leaveToApprove.id,
       status: "approved",
       approvedBy: currentUserId,
     });
 
     setActionLoadingId(null);
+    const approvedLeave = leaveToApprove;
+    setLeaveToApprove(null);
 
     if (!res.success) {
       setErrorMsg(res.error || "Failed to approve leave request.");
     } else {
       const updatedItem: LeaveItem = {
-        ...leave,
+        ...approvedLeave,
         status: "approved",
         approved_by: currentUserId,
       };
-      setPendingLeaves((prev) => prev.filter((l) => l.id !== leave.id));
+
+      setPendingLeaves((prev) => prev.filter((item) => item.id !== approvedLeave.id));
       setHistoryLeaves((prev) => [updatedItem, ...prev]);
     }
   };
 
   const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!leaveToReject || !rejectionReasonInput.trim()) return;
+    if (!leaveToReject) return;
 
     setIsSubmittingReject(true);
     setErrorMsg(null);
@@ -77,7 +105,7 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
       leaveId: leaveToReject.id,
       status: "rejected",
       approvedBy: currentUserId,
-      rejectionReason: rejectionReasonInput.trim(),
+      rejectionReason: rejectionReasonInput.trim() || undefined,
     });
 
     setIsSubmittingReject(false);
@@ -89,9 +117,10 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
         ...leaveToReject,
         status: "rejected",
         approved_by: currentUserId,
-        rejection_reason: rejectionReasonInput.trim(),
+        rejection_reason: rejectionReasonInput.trim() || null,
       };
-      setPendingLeaves((prev) => prev.filter((l) => l.id !== leaveToReject.id));
+
+      setPendingLeaves((prev) => prev.filter((item) => item.id !== leaveToReject.id));
       setHistoryLeaves((prev) => [updatedItem, ...prev]);
       setLeaveToReject(null);
       setRejectionReasonInput("");
@@ -101,259 +130,207 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="border-b border-border pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            Approvals Queue
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Review and action employee leave requests across all projects.
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Clock className="w-5 h-5 text-indigo-500" /> Approvals Queue
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Review site employee leave applications and digitally sign authorization approvals.
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex bg-secondary/80 p-1 rounded-xl border border-border self-start sm:self-auto">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab("pending")}
             className={cn(
-              "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+              "px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2",
               activeTab === "pending"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
             )}
           >
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
-            Pending Queue
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
-              {pendingLeaves.length}
-            </span>
+            <Clock className="w-3.5 h-3.5" />
+            Pending Action ({pendingLeaves.length})
           </button>
-
           <button
             onClick={() => setActiveTab("history")}
             className={cn(
-              "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+              "px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2",
               activeTab === "history"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
             )}
           >
-            <History className="w-3.5 h-3.5 text-indigo-600" />
-            Approval History
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              {historyLeaves.length}
-            </span>
+            <History className="w-3.5 h-3.5" />
+            Approval History ({historyLeaves.length})
           </button>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-medium flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {/* Pending Queue Tab */}
-      {activeTab === "pending" && (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-secondary/50 border-b border-border text-muted-foreground uppercase tracking-wider font-semibold">
-                <tr>
-                  <th className="px-5 py-3.5">Requester</th>
-                  <th className="px-5 py-3.5">Type</th>
-                  <th className="px-5 py-3.5">Dates & Duration</th>
-                  <th className="px-5 py-3.5">Reason</th>
-                  <th className="px-5 py-3.5">Submitted</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {pendingLeaves.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-10 text-muted-foreground">
-                      No pending leave requests in queue.
-                    </td>
-                  </tr>
-                ) : (
-                  pendingLeaves.map((l) => {
-                    const typeCfg = TYPE_CONFIG[l.type] || TYPE_CONFIG.casual;
-                    const days = calculateDays(l.start_date, l.end_date);
-                    const initials = (l.user?.full_name || l.user?.email || "User")
-                      .split(" ")
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase();
-
-                    return (
-                      <tr key={l.id} className="hover:bg-muted/40 transition-colors">
-                        {/* Requester */}
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
-                              {initials}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground leading-tight">
-                                {l.user?.full_name || "Unnamed User"}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">{l.user?.email}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Type */}
-                        <td className="px-5 py-3.5">
-                          <span className={cn("inline-block px-2.5 py-1 rounded-md text-xs font-semibold", typeCfg.bg, typeCfg.text)}>
-                            {typeCfg.label}
-                          </span>
-                        </td>
-
-                        {/* Dates */}
-                        <td className="px-5 py-3.5">
-                          <div className="font-semibold text-foreground">
-                            {new Date(l.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
-                            {new Date(l.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </div>
-                          <span className="text-[11px] text-muted-foreground">
-                            {days} {days === 1 ? "day" : "days"}
-                          </span>
-                        </td>
-
-                        {/* Reason */}
-                        <td className="px-5 py-3.5 max-w-xs text-foreground">
-                          {l.reason || "—"}
-                        </td>
-
-                        {/* Submitted */}
-                        <td className="px-5 py-3.5 text-muted-foreground">
-                          {new Date(l.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                        </td>
-
-                        {/* Action Buttons */}
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleApprove(l)}
-                              disabled={actionLoadingId === l.id}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xs"
-                            >
-                              {actionLoadingId === l.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Check className="w-3.5 h-3.5" />
-                              )}
-                              Approve
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setLeaveToReject(l);
-                                setRejectionReasonInput("");
-                              }}
-                              disabled={actionLoadingId === l.id}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40 transition-all"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                              Reject
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
+          <button onClick={() => setErrorMsg(null)} className="text-xs underline">
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* History Tab */}
-      {activeTab === "history" && (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+      {/* Content Tabs */}
+      {activeTab === "pending" ? (
+        <div className="space-y-4">
+          {pendingLeaves.length === 0 ? (
+            <div className="bg-card border border-border rounded-2xl p-12 text-center shadow-xs">
+              <CheckCircle2 className="w-12 h-12 text-emerald-500/40 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-foreground">Approvals Queue is Clear!</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                No pending leave applications requiring your review.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingLeaves.map((leave) => {
+                const days = calculateDays(leave.start_date, leave.end_date);
+                const typeCfg = TYPE_CONFIG[leave.type] || TYPE_CONFIG.casual;
+
+                return (
+                  <div
+                    key={leave.id}
+                    className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4 hover:border-indigo-500/40 transition-all"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-foreground text-sm">
+                            {leave.user?.full_name || "Employee"}
+                          </h4>
+                          <p className="text-[11px] text-muted-foreground">
+                            {leave.user?.email}
+                          </p>
+                        </div>
+                        <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] font-bold", typeCfg.bg, typeCfg.text)}>
+                          {typeCfg.label}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-secondary/50 rounded-xl border border-border flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[11px] text-muted-foreground block">Period:</span>
+                          <span className="font-semibold text-foreground">
+                            {new Date(leave.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} →{" "}
+                            {new Date(leave.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] text-muted-foreground block">Duration:</span>
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">{days} Day(s)</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-muted-foreground font-semibold block">Reason for Leave:</span>
+                        <p className="text-xs text-foreground/90 bg-muted/30 p-2.5 rounded-lg border border-border/60 leading-relaxed">
+                          {leave.reason}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                      <button
+                        onClick={() => {
+                          setLeaveToReject(leave);
+                          setRejectionReasonInput("");
+                        }}
+                        disabled={actionLoadingId === leave.id}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold hover:bg-rose-100 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" /> Reject
+                      </button>
+
+                      <button
+                        onClick={() => setLeaveToApprove(leave)}
+                        disabled={actionLoadingId === leave.id}
+                        className="flex items-center gap-1 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60"
+                      >
+                        {actionLoadingId === leave.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                        )}
+                        Sign & Approve
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* History Tab */
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-secondary/50 border-b border-border text-muted-foreground uppercase tracking-wider font-semibold">
+              <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold">
                 <tr>
-                  <th className="px-5 py-3.5">Requester</th>
-                  <th className="px-5 py-3.5">Type</th>
-                  <th className="px-5 py-3.5">Dates & Duration</th>
-                  <th className="px-5 py-3.5">Reason</th>
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5">Actioned By</th>
+                  <th className="px-4 py-3">Employee</th>
+                  <th className="px-4 py-3">Leave Type</th>
+                  <th className="px-4 py-3">Dates</th>
+                  <th className="px-4 py-3">Reason</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {historyLeaves.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-muted-foreground">
-                      No processed leave history records found.
+                    <td colSpan={5} className="text-center py-10 text-muted-foreground">
+                      No past leave approval records found.
                     </td>
                   </tr>
                 ) : (
-                  historyLeaves.map((l) => {
-                    const typeCfg = TYPE_CONFIG[l.type] || TYPE_CONFIG.casual;
-                    const days = calculateDays(l.start_date, l.end_date);
-                    const isApproved = l.status === "approved";
+                  historyLeaves.map((item) => {
+                    const days = calculateDays(item.start_date, item.end_date);
+                    const typeCfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.casual;
 
                     return (
-                      <tr key={l.id} className="hover:bg-muted/40 transition-colors">
-                        {/* Requester */}
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-foreground">{l.user?.full_name || "Unnamed User"}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{l.user?.email}</p>
+                      <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-foreground">
+                          {item.user?.full_name || "Employee"}
+                          <span className="block text-[11px] font-normal text-muted-foreground">
+                            {item.user?.email}
+                          </span>
                         </td>
 
-                        {/* Type */}
-                        <td className="px-5 py-3.5">
-                          <span className={cn("inline-block px-2.5 py-1 rounded-md text-xs font-semibold", typeCfg.bg, typeCfg.text)}>
+                        <td className="px-4 py-3">
+                          <span className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-bold", typeCfg.bg, typeCfg.text)}>
                             {typeCfg.label}
                           </span>
                         </td>
 
-                        {/* Dates */}
-                        <td className="px-5 py-3.5">
-                          <div className="font-semibold text-foreground">
-                            {new Date(l.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
-                            {new Date(l.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </div>
-                          <span className="text-[11px] text-muted-foreground">
-                            {days} {days === 1 ? "day" : "days"}
-                          </span>
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                          {new Date(item.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} -{" "}
+                          {new Date(item.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} ({days}d)
                         </td>
 
-                        {/* Reason */}
-                        <td className="px-5 py-3.5 max-w-xs">
-                          <p className="text-foreground truncate">{l.reason || "—"}</p>
-                          {l.rejection_reason && (
-                            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-0.5">
-                              Rejection note: {l.rejection_reason}
-                            </p>
-                          )}
+                        <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
+                          {item.reason}
                         </td>
 
-                        {/* Status Badge */}
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 py-3 text-center">
                           <span
                             className={cn(
-                              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold",
-                              isApproved
-                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                              "inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                              item.status === "approved"
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                                : "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
                             )}
                           >
-                            {isApproved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                            {isApproved ? "Approved" : "Rejected"}
+                            {item.status} (Digitally Signed)
                           </span>
-                        </td>
-
-                        {/* Actioned By */}
-                        <td className="px-5 py-3.5 text-muted-foreground font-medium">
-                          {l.approver?.full_name || "Admin"}
                         </td>
                       </tr>
                     );
@@ -365,45 +342,26 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* Reject Reason Modal */}
       {leaveToReject && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && setLeaveToReject(null)}
-        >
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="text-base font-bold text-rose-600 flex items-center gap-2">
-                <XCircle className="w-4.5 h-4.5" />
-                Reject Leave Request
-              </h3>
-              <button onClick={() => setLeaveToReject(null)} className="p-1 text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <h3 className="font-bold text-foreground text-sm">Reject Leave Application</h3>
+            <p className="text-xs text-muted-foreground">
+              Please state the reason for rejecting <strong>{leaveToReject.user?.full_name || "Employee"}</strong>&apos;s request.
+            </p>
 
-            <form onSubmit={handleConfirmReject} className="p-6 space-y-4">
-              <p className="text-xs text-foreground">
-                Rejecting leave request for <span className="font-bold">{leaveToReject.user?.full_name || leaveToReject.user?.email}</span> (
-                {new Date(leaveToReject.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
-                {new Date(leaveToReject.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}).
-              </p>
+            <form onSubmit={handleConfirmReject} className="space-y-4">
+              <textarea
+                rows={3}
+                required
+                value={rejectionReasonInput}
+                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                placeholder="e.g. Critical project deadline requires full team presence during this period..."
+                className="w-full p-3 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
 
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Rejection Reason <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Provide a clear reason for rejecting this leave request…"
-                  value={rejectionReasonInput}
-                  onChange={(e) => setRejectionReasonInput(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder:text-muted-foreground"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setLeaveToReject(null)}
@@ -414,16 +372,26 @@ export function ApprovalsView({ initialPending, initialHistory, currentUserId }:
                 <button
                   type="submit"
                   disabled={isSubmittingReject}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all shadow-xs"
+                  className="px-4 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-xs disabled:opacity-60"
                 >
-                  {isSubmittingReject && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Reject Leave
+                  Confirm Rejection
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Digital Signature Confirmation Modal for Leave Approval */}
+      <SignatureConfirmModal
+        isOpen={!!leaveToApprove}
+        onClose={() => setLeaveToApprove(null)}
+        onConfirm={handleExecuteApproveWithSignature}
+        actionTitle="Confirm Leave Authorization"
+        summaryText={`You are approving ${calculateDays(leaveToApprove?.start_date || "", leaveToApprove?.end_date || "")} day(s) of ${leaveToApprove?.type || "leave"} for ${leaveToApprove?.user?.full_name || "Employee"}.`}
+        signerFullName={currentUserFullName}
+        confirmButtonText="Confirm & Digitally Sign Leave"
+      />
     </div>
   );
 }
