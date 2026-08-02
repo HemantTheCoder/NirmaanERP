@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -117,9 +118,11 @@ export function Header({ user, userId, onMenuToggle }: HeaderProps) {
       <NotificationBell userId={userId} />
 
       {/* User initials chip */}
-      <div
+      <Link
+        href="/workspace"
+        title="View Profile & Security Settings"
         className={cn(
-          "hidden sm:flex items-center gap-2 text-sm font-medium text-foreground"
+          "hidden sm:flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
         )}
       >
         <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-xs">
@@ -130,7 +133,7 @@ export function Header({ user, userId, onMenuToggle }: HeaderProps) {
             .join("")
             .toUpperCase()}
         </div>
-      </div>
+      </Link>
     </header>
   );
 }
