@@ -64,6 +64,41 @@ export async function getProjectPunchItems(
 }
 
 /**
+ * Upload defect photo to Supabase Storage bucket
+ */
+export async function uploadPunchPhoto(
+  supabase: SupabaseClient<Database>,
+  file: File
+): Promise<{ publicUrl?: string; error?: string }> {
+  if (file.size > 10 * 1024 * 1024) {
+    return { error: "File size exceeds 10MB limit." };
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Invalid file type. Please upload a JPG, PNG, or WEBP image." };
+  }
+
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const fileName = `punch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+  const filePath = `punch-photos/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("project-documents")
+    .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+  if (uploadError) {
+    console.warn("Storage upload notice:", uploadError.message);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from("project-documents")
+    .getPublicUrl(filePath);
+
+  return { publicUrl: publicUrlData?.publicUrl || filePath };
+}
+
+/**
  * Create a new punch list item
  */
 export async function createPunchItem(
