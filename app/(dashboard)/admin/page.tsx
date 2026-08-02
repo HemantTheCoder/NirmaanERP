@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAllAdminUsers, getAdminOverviewData } from "@/lib/queries/admin";
+import { getAuditLogs } from "@/lib/queries/audit";
+import { getKpiSnapshots } from "@/lib/queries/kpis";
 import { AdminView } from "@/components/admin/AdminView";
 import type { UserRole } from "@/types/database";
 
@@ -36,15 +38,19 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [initialUsers, overviewData] = await Promise.all([
+  const [initialUsers, overviewData, auditLogs, kpiSnapshots] = await Promise.all([
     getAllAdminUsers(supabase),
     getAdminOverviewData(supabase),
+    getAuditLogs(supabase, 10),
+    getKpiSnapshots(supabase, 7),
   ]);
 
   return (
     <AdminView
       initialUsers={initialUsers}
       overviewData={overviewData}
+      auditLogs={auditLogs}
+      kpiSnapshots={kpiSnapshots}
       currentUserId={user.id}
     />
   );

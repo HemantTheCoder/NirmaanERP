@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { NotificationBell } from "./NotificationBell";
@@ -13,6 +14,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/schedule":  "Schedule",
   "/reports":   "Reports",
   "/admin":     "Admin",
+  "/tenders":   "Tenders & Bidding",
+  "/about":     "About Nirmaan ERP",
 };
 
 interface HeaderProps {
@@ -26,6 +29,33 @@ interface HeaderProps {
 
 export function Header({ user, userId, onMenuToggle }: HeaderProps) {
   const pathname = usePathname();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check saved theme or system preference
+    const savedTheme = localStorage.getItem("nirmaan-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      document.documentElement.classList.add("dark");
+      setIsDarkMode(true);
+    } else {
+      document.documentElement.classList.remove("dark");
+      setIsDarkMode(false);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("nirmaan-theme", "light");
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("nirmaan-theme", "dark");
+      setIsDarkMode(true);
+    }
+  };
 
   const title =
     Object.entries(PAGE_TITLES).find(([path]) =>
@@ -40,7 +70,7 @@ export function Header({ user, userId, onMenuToggle }: HeaderProps) {
   });
 
   return (
-    <header className="h-16 flex items-center gap-4 px-6 bg-white border-b border-slate-200 shrink-0 shadow-sm">
+    <header className="h-16 flex items-center gap-4 px-6 bg-card border-b border-border shrink-0 shadow-xs transition-colors">
       {/* Mobile menu toggle */}
       <button
         id="mobile-menu-toggle"
@@ -68,6 +98,21 @@ export function Header({ user, userId, onMenuToggle }: HeaderProps) {
         />
       </div>
 
+      {/* Theme Toggle Button */}
+      <button
+        id="theme-toggle"
+        onClick={toggleTheme}
+        className="p-2 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        aria-label="Toggle Theme"
+      >
+        {isDarkMode ? (
+          <Sun className="w-4 h-4 text-amber-400" />
+        ) : (
+          <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+        )}
+      </button>
+
       {/* Notifications */}
       <NotificationBell userId={userId} />
 
@@ -77,7 +122,7 @@ export function Header({ user, userId, onMenuToggle }: HeaderProps) {
           "hidden sm:flex items-center gap-2 text-sm font-medium text-foreground"
         )}
       >
-        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-xs">
           {user.full_name
             .split(" ")
             .map((n) => n[0])

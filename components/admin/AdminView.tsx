@@ -8,15 +8,19 @@ import { SessionsTab } from "@/components/admin/SessionsTab";
 import { OverviewTab } from "@/components/admin/OverviewTab";
 import { createClient } from "@/lib/supabase/client";
 import { getAllAdminUsers, type AdminUserItem, type AdminOverviewData } from "@/lib/queries/admin";
+import type { AuditLogItem } from "@/lib/queries/audit";
+import type { KpiSnapshotItem } from "@/lib/queries/kpis";
 import { cn } from "@/lib/utils";
 
 interface AdminViewProps {
   initialUsers: AdminUserItem[];
   overviewData: AdminOverviewData;
+  auditLogs: AuditLogItem[];
+  kpiSnapshots: KpiSnapshotItem[];
   currentUserId: string;
 }
 
-export function AdminView({ initialUsers, overviewData, currentUserId }: AdminViewProps) {
+export function AdminView({ initialUsers, overviewData, auditLogs, kpiSnapshots, currentUserId }: AdminViewProps) {
   const supabase = createClient();
   const [users, setUsers] = useState<AdminUserItem[]>(initialUsers);
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "roles" | "sessions">("overview");
@@ -102,6 +106,8 @@ export function AdminView({ initialUsers, overviewData, currentUserId }: AdminVi
         {activeTab === "overview" && (
           <OverviewTab
             overviewData={overviewData}
+            auditLogs={auditLogs}
+            kpiSnapshots={kpiSnapshots}
             onNavigateToUsers={() => setActiveTab("users")}
           />
         )}
