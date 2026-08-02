@@ -6,6 +6,7 @@ import { getProjectResources } from "@/lib/queries/resources";
 import { getProjectDocuments } from "@/lib/queries/documents";
 import { getProjectBudgetSummary } from "@/lib/queries/finance";
 import { getProjectPunchItems } from "@/lib/queries/punch_list";
+import { getTodayDpr, getProjectDprHistory } from "@/lib/queries/dpr";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -46,12 +47,23 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   const userRole = (profile?.role ?? "site_staff") as UserRole;
 
-  const [data, resources, documents, budgetSummary, punchItems, teamMembers] = await Promise.all([
+  const [
+    data,
+    resources,
+    documents,
+    budgetSummary,
+    punchItems,
+    todayDpr,
+    dprHistory,
+    teamMembers,
+  ] = await Promise.all([
     getProjectById(supabase, id),
     getProjectResources(supabase, id),
     getProjectDocuments(supabase, id),
     getProjectBudgetSummary(supabase, id, user.id, userRole),
     getProjectPunchItems(supabase, id),
+    getTodayDpr(supabase, id),
+    getProjectDprHistory(supabase, id),
     getProjectManagers(supabase),
   ]);
 
@@ -67,6 +79,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialDocuments={documents}
       initialBudgetSummary={budgetSummary}
       initialPunchItems={punchItems}
+      initialTodayDpr={todayDpr}
+      initialDprHistory={dprHistory}
       teamMembers={teamMembers}
       userId={user.id}
       userRole={userRole}

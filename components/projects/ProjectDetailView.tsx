@@ -14,6 +14,7 @@ import {
   Folder,
   IndianRupee,
   AlertOctagon,
+  FileCheck2,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
@@ -21,11 +22,13 @@ import { ProjectResourcesView } from "@/components/projects/ProjectResourcesView
 import { ProjectDocumentsView } from "@/components/projects/ProjectDocumentsView";
 import { ProjectBudgetView } from "@/components/projects/ProjectBudgetView";
 import { PunchListView } from "@/components/projects/PunchListView";
+import { DailyProgressReportView } from "@/components/projects/DailyProgressReportView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
 import type { ResourceAllocationItem } from "@/lib/queries/resources";
 import type { ProjectDocumentItem } from "@/lib/queries/documents";
 import type { ProjectBudgetSummary } from "@/lib/queries/finance";
 import type { PunchItem } from "@/lib/queries/punch_list";
+import type { DailyProgressReport } from "@/lib/queries/dpr";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +47,8 @@ interface ProjectDetailViewProps {
   initialDocuments: ProjectDocumentItem[];
   initialBudgetSummary: ProjectBudgetSummary;
   initialPunchItems: PunchItem[];
+  initialTodayDpr: DailyProgressReport | null;
+  initialDprHistory: DailyProgressReport[];
   teamMembers?: any[];
   userId: string;
   userRole: UserRole;
@@ -56,12 +61,14 @@ export function ProjectDetailView({
   initialDocuments,
   initialBudgetSummary,
   initialPunchItems,
+  initialTodayDpr,
+  initialDprHistory,
   teamMembers = [],
   userId,
   userRole,
 }: ProjectDetailViewProps) {
   const [tasks, setTasks] = useState<any[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -226,6 +233,19 @@ export function ProjectDetailView({
               <AlertOctagon className="w-3.5 h-3.5 text-rose-500" />
               Punch List ({initialPunchItems.length})
             </button>
+
+            <button
+              onClick={() => setActiveTab("dpr")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "dpr"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
+              Daily Report ({initialDprHistory.length})
+            </button>
           </div>
         </div>
 
@@ -340,6 +360,16 @@ export function ProjectDetailView({
             initialItems={initialPunchItems}
             user={{ id: userId, role: userRole }}
             teamMembers={teamMembers}
+          />
+        )}
+
+        {/* Tab 7: Daily Report */}
+        {activeTab === "dpr" && (
+          <DailyProgressReportView
+            projectId={project.id}
+            initialHistory={initialDprHistory}
+            initialTodayReport={initialTodayDpr}
+            user={{ id: userId, role: userRole }}
           />
         )}
       </div>
