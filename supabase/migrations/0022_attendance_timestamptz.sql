@@ -2,10 +2,10 @@
 -- Nirmaan ERP — Migration 0022: Attendance TIMESTAMPTZ Column Migration
 -- =============================================================================
 
--- 1. Alter check_in and check_out column types to TIMESTAMPTZ
+-- 1. Alter check_in and check_out column types to TIMESTAMPTZ using (date + time)
 ALTER TABLE public.attendance
-  ALTER COLUMN check_in TYPE TIMESTAMPTZ USING check_in::timestamptz,
-  ALTER COLUMN check_out TYPE TIMESTAMPTZ USING check_out::timestamptz;
+  ALTER COLUMN check_in TYPE TIMESTAMPTZ USING (CASE WHEN check_in IS NOT NULL THEN (date + check_in) AT TIME ZONE 'Asia/Kolkata' ELSE NULL END),
+  ALTER COLUMN check_out TYPE TIMESTAMPTZ USING (CASE WHEN check_out IS NOT NULL THEN (date + check_out) AT TIME ZONE 'Asia/Kolkata' ELSE NULL END);
 
 -- 2. Update 9:30 AM IST cutoff status calculation trigger
 CREATE OR REPLACE FUNCTION trg_compute_attendance_status()
