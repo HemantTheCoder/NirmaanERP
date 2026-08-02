@@ -134,6 +134,9 @@ export function PunchListView({
     }
 
     setErrorMsg(null);
+    if (uploadedFilePreview) {
+      URL.revokeObjectURL(uploadedFilePreview);
+    }
     setUploadedFile(file);
     const objectUrl = URL.createObjectURL(file);
     setUploadedFilePreview(objectUrl);
