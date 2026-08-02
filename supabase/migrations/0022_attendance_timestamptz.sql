@@ -2,6 +2,9 @@
 -- Nirmaan ERP — Migration 0022: Attendance TIMESTAMPTZ Column Migration
 -- =============================================================================
 
+-- 0. Extend attendance_status enum with 'late'
+ALTER TYPE public.attendance_status ADD VALUE IF NOT EXISTS 'late';
+
 -- 1. Alter check_in and check_out column types to TIMESTAMPTZ using (date + time)
 ALTER TABLE public.attendance
   ALTER COLUMN check_in TYPE TIMESTAMPTZ USING (CASE WHEN check_in IS NOT NULL THEN (date + check_in) AT TIME ZONE 'Asia/Kolkata' ELSE NULL END),
