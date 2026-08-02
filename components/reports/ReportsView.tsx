@@ -36,10 +36,12 @@ import {
   type DateRangeFilter,
   type ReportsAggregateData,
 } from "@/lib/queries/reports";
+import type { CompanyBudgetAnalytics } from "@/lib/queries/finance";
 import { cn } from "@/lib/utils";
 
 interface ReportsViewProps {
   initialData: ReportsAggregateData;
+  budgetAnalytics?: CompanyBudgetAnalytics;
 }
 
 const DATE_RANGE_OPTIONS: { value: DateRangeFilter; label: string }[] = [
@@ -63,7 +65,7 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   document.body.removeChild(link);
 }
 
-export function ReportsView({ initialData }: ReportsViewProps) {
+export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) {
   const supabase = createClient();
   const [data, setData] = useState<ReportsAggregateData>(initialData);
   const [dateRange, setDateRange] = useState<DateRangeFilter>("60d");
@@ -724,6 +726,111 @@ export function ReportsView({ initialData }: ReportsViewProps) {
             )}
           </div>
         </div>
+
+        {/* Card 8: Cost Variance & Budget Performance (Lean Construction Financial Metric) */}
+        {budgetAnalytics && (
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card lg:col-span-2">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center">
+                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Cost Variance & Financial Performance</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Per-project budget variance (Allocated Cap − Actual Approved Spend) — Lean Construction financial metric
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-semibold text-foreground">
+                    Overall Utilization: <span className="text-indigo-600 dark:text-indigo-400">{budgetAnalytics.overallUtilizationPercent}%</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    ₹{budgetAnalytics.totalApprovedExpenses.toLocaleString("en-IN")} / ₹{budgetAnalytics.totalAllocatedBudget.toLocaleString("en-IN")}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const rows = [
+                      ["Project Name", "Budget Allocated", "Approved Spend", "Cost Variance", "Variance %", "Status"],
+                      ...budgetAnalytics.projectCostVariances.map((v: any) => [
+                        v.projectName,
+                        v.budgetAllocated,
+                        v.approvedSpend,
+                        v.variance,
+                        `${v.variancePercent}%`,
+                        v.variance >= 0 ? "Under Budget" : "Over Budget",
+                      ]),
+                    ];
+                    downloadCsv("cost_variance_financial_performance", rows);
+                  }}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+                  title="Export CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  CSV
+                </button>
+              </div>
+            </div>
+
+            <div className="h-64 w-full">
+              {budgetAnalytics.projectCostVariances.length === 0 ? (
+                <div className="text-center py-10 text-xs text-muted-foreground">
+                  No project budget allocations found.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={budgetAnalytics.projectCostVariances}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="projectName" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={10}
+                      tickLine={false}
+                      tickFormatter={(val) => `₹${(val / 100000).toFixed(0)}L`}
+                    />
+                    <Tooltip
+                      formatter={(val: any, name: any) => [
+                        `₹${Number(val).toLocaleString("en-IN")}`,
+                        name === "variance" ? "Cost Variance (Savings / Deficit)" : name,
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "0.5rem",
+                        fontSize: "12px",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Bar dataKey="variance" name="Cost Variance (Cap - Spend)" radius={[4, 4, 0, 0]}>
+                      {budgetAnalytics.projectCostVariances.map((entry: any, index: number) => (
+                        <Cell key={`cell-var-${index}`} fill={entry.variance >= 0 ? "#10b981" : "#f43f5e"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-6 pt-3 border-t border-border text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-muted-foreground font-medium">Positive Variance: Under Budget (Savings)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="text-muted-foreground font-medium">Negative Variance: Over Budget (Deficit)</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -12,14 +12,17 @@ import {
   FileText,
   Package,
   Folder,
+  IndianRupee,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
 import { ProjectResourcesView } from "@/components/projects/ProjectResourcesView";
 import { ProjectDocumentsView } from "@/components/projects/ProjectDocumentsView";
+import { ProjectBudgetView } from "@/components/projects/ProjectBudgetView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
 import type { ResourceAllocationItem } from "@/lib/queries/resources";
 import type { ProjectDocumentItem } from "@/lib/queries/documents";
+import type { ProjectBudgetSummary } from "@/lib/queries/finance";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +39,7 @@ interface ProjectDetailViewProps {
   initialTasks: any[];
   initialResources: ResourceAllocationItem[];
   initialDocuments: ProjectDocumentItem[];
+  initialBudgetSummary: ProjectBudgetSummary;
   userId: string;
   userRole: UserRole;
 }
@@ -45,11 +49,12 @@ export function ProjectDetailView({
   initialTasks,
   initialResources,
   initialDocuments,
+  initialBudgetSummary,
   userId,
   userRole,
 }: ProjectDetailViewProps) {
   const [tasks, setTasks] = useState<any[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -136,7 +141,7 @@ export function ProjectDetailView({
       {/* Tab Switcher & Content Wrapper */}
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-border pb-3">
-          <div className="flex bg-secondary/80 p-1 rounded-xl border border-border">
+          <div className="flex flex-wrap bg-secondary/80 p-1 rounded-xl border border-border gap-1">
             <button
               onClick={() => setActiveTab("tasks")}
               className={cn(
@@ -187,6 +192,19 @@ export function ProjectDetailView({
             >
               <Folder className="w-3.5 h-3.5 text-indigo-500" />
               Documents ({initialDocuments.length})
+            </button>
+
+            <button
+              onClick={() => setActiveTab("budget")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "budget"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <IndianRupee className="w-3.5 h-3.5 text-emerald-600" />
+              Budget & Expenses
             </button>
           </div>
         </div>
@@ -283,6 +301,15 @@ export function ProjectDetailView({
             projectId={project.id}
             userId={userId}
             userRole={userRole}
+          />
+        )}
+
+        {/* Tab 5: Budget & Expenses */}
+        {activeTab === "budget" && (
+          <ProjectBudgetView
+            projectId={project.id}
+            initialSummary={initialBudgetSummary}
+            user={{ id: userId, role: userRole }}
           />
         )}
       </div>

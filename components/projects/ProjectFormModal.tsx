@@ -15,6 +15,7 @@ interface ProjectFormModalProps {
     end_date: string;
     manager_id: string;
     client_id: string;
+    budget_allocated?: number | null;
   }) => Promise<void>;
   initialData?: ProjectWithManager | null;
   managers: ProjectManagerOption[];
@@ -38,6 +39,7 @@ export function ProjectFormModal({
   const [endDate, setEndDate] = useState("");
   const [managerId, setManagerId] = useState("");
   const [clientId, setClientId] = useState("");
+  const [budgetAllocated, setBudgetAllocated] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function ProjectFormModal({
       setEndDate(initialData.end_date || "");
       setManagerId(initialData.manager_id || "");
       setClientId(initialData.client_id || "");
+      setBudgetAllocated(initialData.budget_allocated ? String(initialData.budget_allocated) : "");
     } else {
       setName("");
       setDescription("");
@@ -57,6 +60,7 @@ export function ProjectFormModal({
       setEndDate("");
       setManagerId("");
       setClientId("");
+      setBudgetAllocated("");
     }
     setError("");
   }, [initialData, isOpen]);
@@ -80,6 +84,7 @@ export function ProjectFormModal({
         end_date: endDate,
         manager_id: managerId,
         client_id: clientId,
+        budget_allocated: budgetAllocated ? Number(budgetAllocated) : null,
       });
       onClose();
     } catch (err: any) {
@@ -193,7 +198,7 @@ export function ProjectFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Start Date
@@ -208,12 +213,27 @@ export function ProjectFormModal({
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Target Completion Date
+                Completion Date
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Allocated Budget (₹)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={10000}
+                value={budgetAllocated}
+                onChange={(e) => setBudgetAllocated(e.target.value)}
+                placeholder="e.g. 25000000"
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>

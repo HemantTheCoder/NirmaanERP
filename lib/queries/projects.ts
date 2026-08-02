@@ -12,6 +12,7 @@ export interface ProjectWithManager {
   end_date: string | null;
   manager_id: string | null;
   client_id: string | null;
+  budget_allocated: number | null;
   created_at: string;
   manager_name?: string | null;
   client_name?: string | null;
@@ -76,6 +77,7 @@ export async function getProjects(
     end_date: p.end_date,
     manager_id: p.manager_id,
     client_id: p.client_id || null,
+    budget_allocated: p.budget_allocated ? Number(p.budget_allocated) : null,
     created_at: p.created_at,
     manager_name: p.users?.full_name || p.users?.email || null,
     client_name: p.client?.full_name || p.client?.email || null,
@@ -224,6 +226,7 @@ export async function createProject(
     end_date?: string;
     manager_id?: string;
     client_id?: string;
+    budget_allocated?: number | null;
   }
 ) {
   const { data, error } = await (supabase.from("projects") as any).insert(payload).select().single();
@@ -244,6 +247,7 @@ export async function updateProject(
     end_date: string | null;
     manager_id: string | null;
     client_id: string | null;
+    budget_allocated: number | null;
   }>
 ) {
   const { data, error } = await (supabase.from("projects") as any)

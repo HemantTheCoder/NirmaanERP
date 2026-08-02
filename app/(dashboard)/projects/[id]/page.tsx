@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProjectById } from "@/lib/queries/projects";
 import { getProjectResources } from "@/lib/queries/resources";
 import { getProjectDocuments } from "@/lib/queries/documents";
+import { getProjectBudgetSummary } from "@/lib/queries/finance";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -44,10 +45,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   const userRole = (profile?.role ?? "site_staff") as UserRole;
 
-  const [data, resources, documents] = await Promise.all([
+  const [data, resources, documents, budgetSummary] = await Promise.all([
     getProjectById(supabase, id),
     getProjectResources(supabase, id),
     getProjectDocuments(supabase, id),
+    getProjectBudgetSummary(supabase, id, user.id, userRole),
   ]);
 
   if (!data) {
@@ -60,6 +62,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialTasks={data.tasks}
       initialResources={resources}
       initialDocuments={documents}
+      initialBudgetSummary={budgetSummary}
       userId={user.id}
       userRole={userRole}
     />
