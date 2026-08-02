@@ -87,7 +87,7 @@ export function ProjectBudgetView({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const isStaff = user.role === "admin" || user.role === "project_manager";
+  const isManagerOrAdmin = user.role === "admin" || user.role === "project_manager";
 
   const formatCurrency = (val: number | null) => {
     if (val === null || val === undefined) return "Not Set";
@@ -304,7 +304,7 @@ export function ProjectBudgetView({
       </div>
 
       {/* Financial KPI Summary Cards (Admin & PM only) */}
-      {isStaff && (
+      {isManagerOrAdmin && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Allocated Budget */}
@@ -443,13 +443,13 @@ export function ProjectBudgetView({
                 <th className="px-4 py-3">Logged By</th>
                 <th className="px-4 py-3 text-right">Amount (₹)</th>
                 <th className="px-4 py-3 text-center">Status</th>
-                {isStaff && <th className="px-4 py-3 text-right">Review Action</th>}
+                {isManagerOrAdmin && <th className="px-4 py-3 text-right">Review Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {summary.expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={isStaff ? 7 : 6} className="text-center py-10 text-muted-foreground">
+                  <td colSpan={isManagerOrAdmin ? 7 : 6} className="text-center py-10 text-muted-foreground">
                     No expense entries recorded for this project.
                   </td>
                 </tr>
@@ -512,7 +512,7 @@ export function ProjectBudgetView({
                       </td>
 
                       {/* Admin/PM Actions */}
-                      {isStaff && (
+                      {isManagerOrAdmin && (
                         <td className="px-4 py-3.5 text-right whitespace-nowrap">
                           {expense.status === "pending" ? (
                             <div className="flex items-center justify-end gap-1.5">
