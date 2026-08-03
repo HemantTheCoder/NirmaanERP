@@ -38,7 +38,13 @@ export function SignupForm() {
     });
 
     if (signupError) {
-      setError(signupError.message);
+      if (signupError.message.toLowerCase().includes("rate limit") || signupError.status === 429) {
+        setError(
+          "Supabase email signup rate limit reached (free tier SMTP limits rapid new user signups). Please sign in using an existing demo account or try again in a few minutes."
+        );
+      } else {
+        setError(signupError.message);
+      }
       setLoading(false);
       return;
     }
