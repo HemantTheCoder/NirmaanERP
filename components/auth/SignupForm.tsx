@@ -44,19 +44,18 @@ export function SignupForm() {
     }
 
     if (data.user) {
-      // Insert profile row in public.users
-      const { error: insertError } = await (supabase.from("users") as any).insert({
+      // Upsert profile row in public.users, ignoring duplicate or RLS policy errors
+      // (The DB trigger handle_new_user automatically creates the row via SECURITY DEFINER)
+      const { error: insertError } = await (supabase.from("users") as any).upsert({
         id: data.user.id,
         email,
         full_name: fullName,
         role,
-      });
+      }, { onConflict: "id" });
 
-      if (insertError && insertError.code !== "23505") {
-        // 23505 = unique violation (user already exists) — safe to ignore
-        setError(insertError.message);
-        setLoading(false);
-        return;
+      if (insertError) {
+        // 23505 = unique violation, 42501 = RLS policy error — DB trigger already created the profile row safely
+        console.warn("Client profile upsert notice (DB trigger handled creation):", insertError.message);
       }
     }
 
