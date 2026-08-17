@@ -18,6 +18,10 @@ import {
   ShieldAlert,
   Gavel,
   Info,
+  ShoppingCart,
+  HardHat,
+  Boxes,
+  MessageSquareText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +39,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Projects",        href: "/projects",    icon: FolderKanban },
   { label: "My Workspace",    href: "/workspace",   icon: Briefcase },
   { label: "Tenders & Bids",  href: "/tenders",     icon: Gavel, allowedRoles: ["admin", "project_manager"] },
+  { label: "Procurement",     href: "/procurement", icon: ShoppingCart, allowedRoles: ["admin", "project_manager"] },
+  { label: "Subcontractors",  href: "/subcontractors", icon: HardHat, allowedRoles: ["admin", "project_manager"] },
+  { label: "Inventory",       href: "/inventory",   icon: Boxes, allowedRoles: ["admin", "project_manager", "site_staff"] },
+  { label: "RFIs & Changes",  href: "/rfis",        icon: MessageSquareText, allowedRoles: ["admin", "project_manager", "site_staff"] },
   { label: "Schedule",        href: "/schedule",    icon: CalendarDays },
   { label: "Safety Reports",  href: "/safety",      icon: ShieldAlert },
   { label: "Report an Issue", href: "/grievances",  icon: AlertCircle },
