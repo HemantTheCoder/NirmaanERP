@@ -24,6 +24,7 @@ import type { UserRole } from "@/types/database";
 import { CreateInventoryItemModal } from "./CreateInventoryItemModal";
 import { RecordTransactionModal } from "./RecordTransactionModal";
 import { CreateEquipmentModal } from "./CreateEquipmentModal";
+import { PrintExportButton } from "@/components/common/PrintExportButton";
 
 interface InventoryViewProps {
   items: InventoryItem[];
@@ -83,39 +84,42 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
           </p>
         </div>
 
-        {tab === "materials" && canTransact && (
-          <div className="flex gap-2 shrink-0">
-            {canManage && (
+        <div className="flex gap-2 shrink-0">
+          <PrintExportButton reportTitle="Inventory & Equipment Report" />
+          {tab === "materials" && canTransact && (
+            <>
+              {canManage && (
+                <button
+                  onClick={() => setIsItemModalOpen(true)}
+                  className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-card border border-border hover:border-indigo-500/50 text-foreground font-medium rounded-xl text-xs transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Item
+                </button>
+              )}
               <button
-                onClick={() => setIsItemModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-card border border-border hover:border-indigo-500/50 text-foreground font-medium rounded-xl text-xs transition-all"
+                onClick={() => setIsTxnModalOpen(true)}
+                className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
               >
-                <Plus className="w-4 h-4" />
-                Add Item
+                <ArrowUpDown className="w-4 h-4" />
+                Record Transaction
               </button>
-            )}
+            </>
+          )}
+          {tab === "equipment" && canManage && (
             <button
-              onClick={() => setIsTxnModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+              onClick={() => setIsEquipModalOpen(true)}
+              className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
             >
-              <ArrowUpDown className="w-4 h-4" />
-              Record Transaction
+              <Plus className="w-4 h-4" />
+              Add Equipment
             </button>
-          </div>
-        )}
-        {tab === "equipment" && canManage && (
-          <button
-            onClick={() => setIsEquipModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Add Equipment
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print-card">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <Package className="w-5 h-5" />
@@ -155,7 +159,7 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
       </div>
 
       {/* Tabs + Search */}
-      <div className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="no-print bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs shrink-0">
           <button
             onClick={() => setTab("materials")}
@@ -244,7 +248,7 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 print-card">
           {filteredEquipment.map((eq) => {
             const statusCfg = EQUIPMENT_STATUS_BADGES[eq.status];
             return (

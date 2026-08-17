@@ -171,32 +171,10 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto print:max-w-none print:m-0 print:p-0">
-      {/* ── Print Stylesheet ────────────────────────────────────────────────── */}
-      <style jsx global>{`
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          header, sidebar, nav, button, .no-print {
-            display: none !important;
-          }
-          .print\\:block {
-            display: block !important;
-          }
-          .reports-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 1rem !important;
-            page-break-inside: avoid;
-          }
-          .report-card {
-            border: 1px solid #cbd5e1 !important;
-            box-shadow: none !important;
-            break-inside: avoid;
-          }
-        }
-      `}</style>
+      {/* Print stylesheet lives in app/globals.css as a plain @media print
+          block — a <style jsx> tag here would silently do nothing, since
+          styled-jsx requires an explicit StyledJsxRegistry in the App Router
+          (see Next.js CSS-in-JS docs) that this project doesn't set up. */}
 
       {/* Header & Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 no-print">
