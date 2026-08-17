@@ -148,3 +148,64 @@ textarea::placeholder {
 }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
+/* ─── Print ─────────────────────────────────────────────────────────────────── */
+/* Printed pages always use the light palette regardless of the active theme —
+   without this, a dark-mode print would force body to white via page-level
+   print rules while every bg-card/text-foreground element (driven by these
+   custom properties, not by body's color) stayed on its dark-mode value. */
+@media print {
+  :root,
+  .dark {
+    --background:        0 0% 100%;
+    --foreground:         224 71% 6%;
+    --card:               0 0% 100%;
+    --card-foreground:    224 71% 6%;
+    --popover:            0 0% 100%;
+    --popover-foreground: 224 71% 6%;
+    --primary:            243 75% 59%;
+    --primary-foreground: 210 40% 98%;
+    --secondary:          220 14% 94%;
+    --secondary-foreground: 220 13% 28%;
+    --muted:              220 14% 94%;
+    --muted-foreground:   220 13% 32%;
+    --accent:             220 14% 94%;
+    --accent-foreground:  220 13% 24%;
+    --border:             220 13% 86%;
+    --input:              220 13% 86%;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  header, aside, nav, button, .no-print {
+    display: none !important;
+  }
+
+  .print-only,
+  .print\:block {
+    display: block !important;
+  }
+
+  /* break-inside/page-break-inside is unreliable on grid/flex children in
+     most browsers — force block layout so cards reliably stay whole instead
+     of getting sliced across a page boundary. */
+  .print-card,
+  .reports-grid {
+    display: block !important;
+  }
+  .print-card > *,
+  .report-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.print-only {
+  display: none;
+}
+

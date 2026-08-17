@@ -20,6 +20,7 @@ import type { Vendor } from "@/lib/queries/procurement";
 import type { UserRole } from "@/types/database";
 import { CreateSubcontractModal } from "./CreateSubcontractModal";
 import { AddReviewModal } from "./AddReviewModal";
+import { PrintExportButton } from "@/components/common/PrintExportButton";
 
 interface SubcontractorsViewProps {
   subcontracts: SubcontractWithDetails[];
@@ -91,19 +92,22 @@ export function SubcontractorsView({ subcontracts, vendors, projects, user }: Su
           </p>
         </div>
 
-        {canManage && (
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            New Subcontract
-          </button>
-        )}
+        <div className="flex gap-2 shrink-0">
+          <PrintExportButton reportTitle="Subcontractor Management Report" />
+          {canManage && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              New Subcontract
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print-card">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <FileSignature className="w-5 h-5" />
@@ -143,7 +147,7 @@ export function SubcontractorsView({ subcontracts, vendors, projects, user }: Su
       </div>
 
       {/* Filters */}
-      <div className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="no-print bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -176,7 +180,7 @@ export function SubcontractorsView({ subcontracts, vendors, projects, user }: Su
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 print-card">
           {filtered.map((sc) => {
             const statusCfg = STATUS_BADGES[sc.status];
             const next = NEXT_STATUS[sc.status];

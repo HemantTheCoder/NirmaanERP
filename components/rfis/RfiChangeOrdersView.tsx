@@ -19,6 +19,7 @@ import type { UserRole } from "@/types/database";
 import { CreateRfiModal } from "./CreateRfiModal";
 import { RespondRfiModal } from "./RespondRfiModal";
 import { CreateChangeOrderModal } from "./CreateChangeOrderModal";
+import { PrintExportButton } from "@/components/common/PrintExportButton";
 
 interface RfiChangeOrdersViewProps {
   rfis: RfiWithDetails[];
@@ -121,10 +122,11 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
         </div>
 
         <div className="flex gap-2 shrink-0">
+          <PrintExportButton reportTitle="RFIs & Change Orders Report" />
           {tab === "rfis" && canRaiseRfi && (
             <button
               onClick={() => setIsRfiModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+              className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
             >
               <Plus className="w-4 h-4" />
               New RFI
@@ -133,7 +135,7 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
           {tab === "change_orders" && canManage && (
             <button
               onClick={() => setIsCoModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+              className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
             >
               <Plus className="w-4 h-4" />
               New Change Order
@@ -143,7 +145,7 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print-card">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
@@ -183,7 +185,7 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
       </div>
 
       {/* Tabs + Search */}
-      <div className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="no-print bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs shrink-0">
           <button
             onClick={() => setTab("rfis")}
@@ -299,7 +301,7 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 print-card">
           {filteredCOs.map((co) => {
             const statusCfg = CO_STATUS_BADGES[co.status];
             const next = NEXT_CO_STATUS[co.status];

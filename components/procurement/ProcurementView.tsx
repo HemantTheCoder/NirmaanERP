@@ -20,6 +20,7 @@ import type { PurchaseOrderWithDetails, Vendor, PoStatus } from "@/lib/queries/p
 import type { UserRole } from "@/types/database";
 import { CreatePOModal } from "./CreatePOModal";
 import { CreateVendorModal } from "./CreateVendorModal";
+import { PrintExportButton } from "@/components/common/PrintExportButton";
 
 interface ProcurementViewProps {
   purchaseOrders: PurchaseOrderWithDetails[];
@@ -101,28 +102,31 @@ export function ProcurementView({ purchaseOrders, vendors, projects, user }: Pro
           </p>
         </div>
 
-        {canManage && (
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => setIsVendorModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-card border border-border hover:border-indigo-500/50 text-foreground font-medium rounded-xl text-xs transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              Add Vendor
-            </button>
-            <button
-              onClick={() => setIsPoModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              New Purchase Order
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2 shrink-0">
+          <PrintExportButton reportTitle="Procurement Report" />
+          {canManage && (
+            <>
+              <button
+                onClick={() => setIsVendorModalOpen(true)}
+                className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-card border border-border hover:border-indigo-500/50 text-foreground font-medium rounded-xl text-xs transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Add Vendor
+              </button>
+              <button
+                onClick={() => setIsPoModalOpen(true)}
+                className="no-print inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                New Purchase Order
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print-card">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <Package className="w-5 h-5" />
@@ -162,7 +166,7 @@ export function ProcurementView({ purchaseOrders, vendors, projects, user }: Pro
       </div>
 
       {/* Tabs + Filters */}
-      <div className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="no-print bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs shrink-0">
           <button
             onClick={() => setTab("orders")}
@@ -284,7 +288,7 @@ export function ProcurementView({ purchaseOrders, vendors, projects, user }: Pro
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 print-card">
           {filteredVendors.map((vendor) => (
             <div key={vendor.id} className="bg-card border border-border hover:border-indigo-500/50 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center justify-between gap-2 mb-3">
