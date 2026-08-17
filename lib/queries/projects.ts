@@ -68,7 +68,7 @@ export async function getProjects(
 
   if (error) {
     console.error("Error fetching projects:", error);
-    return [];
+    throw new Error(`Failed to load projects: ${error.message}`);
   }
 
   return (projects || []).map((p: any) => ({
@@ -113,7 +113,17 @@ export async function getProjectById(
     .eq("id", id)
     .single();
 
-  if (projError || !project) {
+  if (projError) {
+    // PGRST116 = .single() found 0 rows — a genuine "project doesn't exist",
+    // not a query failure. Any other code is a real error and should surface.
+    if (projError.code !== "PGRST116") {
+      console.error("Error fetching project:", projError);
+      throw new Error(`Failed to load project: ${projError.message}`);
+    }
+    return null;
+  }
+
+  if (!project) {
     return null;
   }
 
@@ -155,7 +165,7 @@ export async function getProjectManagers(
 
   if (error) {
     console.error("Error fetching project managers:", error);
-    return [];
+    throw new Error(`Failed to load project managers: ${error.message}`);
   }
 
   return (data || []) as ProjectManagerOption[];
@@ -175,7 +185,7 @@ export async function getClientOptions(
 
   if (error) {
     console.error("Error fetching client options:", error);
-    return [];
+    throw new Error(`Failed to load client options: ${error.message}`);
   }
 
   return (data || []) as ClientOption[];

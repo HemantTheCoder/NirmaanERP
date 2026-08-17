@@ -37,7 +37,7 @@ export async function getMyTasks(
 
   if (error) {
     console.error("Error fetching user tasks:", error);
-    return [];
+    throw new Error(`Failed to load tasks: ${error.message}`);
   }
 
   return (data || []).map((t: any) => ({

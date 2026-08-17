@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Mail, Lock, User, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, User, ChevronDown, Eye, EyeOff, MailCheck } from "lucide-react";
 import type { UserRole } from "@/types/database";
 
 const SIGNUP_ROLES: { value: Exclude<UserRole, "admin" | "contractor">; label: string }[] = [
@@ -23,6 +23,7 @@ export function SignupForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,8 +66,34 @@ export function SignupForm() {
       }
     }
 
+    // When email confirmation is required, signUp() succeeds but returns no
+    // session — redirecting to /dashboard here would just bounce the user
+    // straight back to /login with zero explanation.
+    if (!data.session) {
+      setLoading(false);
+      setPendingConfirmation(true);
+      return;
+    }
+
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (pendingConfirmation) {
+    return (
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400">
+          <MailCheck className="w-6 h-6" />
+        </div>
+        <div>
+          <h3 className="text-white font-medium">Check your email</h3>
+          <p className="text-slate-400 text-sm mt-1">
+            We sent a confirmation link to <span className="text-slate-300">{email}</span>.
+            Click it to activate your account, then sign in.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
