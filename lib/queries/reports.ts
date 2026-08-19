@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { PPC_TARGET_PERCENT } from "./dpr";
+import { getAllDelays, averageDaysToRectify, type ProjectDelay } from "./delays";
 
 export type DateRangeFilter = "30d" | "60d" | "90d" | "all";
 
@@ -64,6 +66,35 @@ export interface PunchListMetricsData {
   majorCount: number;
 }
 
+/**
+ * Daily Percent Plan Complete from the DPR checklist (planned vs. actually
+ * completed line items on a given day), distinct from `ppcTrend` above —
+ * that one is a weekly task-due-date reliability rate. Both are labeled
+ * "PPC" in construction PM usage but computed from different data, so the
+ * UI keeps them visually and textually separate rather than merging them.
+ */
+export interface DailyPpcTrendItem {
+  date: string; // YYYY-MM-DD
+  ppc: number;
+  projectId: string;
+  projectName: string;
+}
+
+export interface DaysBelowTargetItem {
+  projectId: string;
+  projectName: string;
+  daysBelowTarget: number;
+  totalDaysReported: number;
+}
+
+export interface DelayMetrics {
+  delayLog: ProjectDelay[];
+  daysBelowTargetByProject: DaysBelowTargetItem[];
+  avgDaysToRectifyPortfolio: number | null;
+  avgDaysToRectifyByProject: { projectId: string; projectName: string; avgDays: number | null }[];
+  openDelayCount: number;
+}
+
 export interface ReportsAggregateData {
   projectStatus: ProjectStatusItem[];
   completionTrend: TaskCompletionTrendItem[];
@@ -75,6 +106,8 @@ export interface ReportsAggregateData {
   ppcTrend: PpcTrendItem[];
   resourceUtilization: ResourceUtilizationData;
   punchListMetrics?: PunchListMetricsData;
+  dailyPpcTrend: DailyPpcTrendItem[];
+  delayMetrics: DelayMetrics;
 }
 
 const STATUS_COLOR_MAP: Record<string, { label: string; color: string }> = {
@@ -378,6 +411,78 @@ export async function getReportsData(
     majorCount: punchMajor,
   };
 
+  // ── 7. Delays & PPC (checklist-based) ─────────────────────────────────────────
+  const projectNameById = new Map(projectsList.map((p) => [p.id, p.name]));
+
+  const dprQuery = (supabase.from("daily_progress_reports") as any)
+    .select("project_id, report_date, dpr_checklist_items ( is_completed )")
+    .gte("report_date", startDate.toISOString().split("T")[0]);
+  if (projectId) {
+    dprQuery.eq("project_id", projectId);
+  }
+  const { data: dprRows, error: dprError } = await dprQuery;
+  if (dprError) {
+    console.error("Error fetching DPR checklist data for reports:", dprError);
+  }
+
+  const dailyPpcTrend: DailyPpcTrendItem[] = [];
+  const belowTargetCountByProject = new Map<string, number>();
+  const totalReportedByProject = new Map<string, number>();
+
+  for (const row of dprRows || []) {
+    const items = (row.dpr_checklist_items || []) as { is_completed: boolean }[];
+    if (items.length === 0) continue; // no plan recorded that day — not a 0%, just no data
+
+    const completed = items.filter((i) => i.is_completed).length;
+    const ppc = Math.round((completed / items.length) * 1000) / 10;
+    const projectName = projectNameById.get(row.project_id) ?? "Unknown Project";
+
+    dailyPpcTrend.push({ date: row.report_date, ppc, projectId: row.project_id, projectName });
+
+    totalReportedByProject.set(row.project_id, (totalReportedByProject.get(row.project_id) ?? 0) + 1);
+    if (ppc < PPC_TARGET_PERCENT) {
+      belowTargetCountByProject.set(row.project_id, (belowTargetCountByProject.get(row.project_id) ?? 0) + 1);
+    }
+  }
+
+  dailyPpcTrend.sort((a, b) => a.date.localeCompare(b.date));
+
+  const daysBelowTargetByProject: DaysBelowTargetItem[] = Array.from(totalReportedByProject.entries())
+    .map(([pid, total]) => ({
+      projectId: pid,
+      projectName: projectNameById.get(pid) ?? "Unknown Project",
+      daysBelowTarget: belowTargetCountByProject.get(pid) ?? 0,
+      totalDaysReported: total,
+    }))
+    .sort((a, b) => b.daysBelowTarget - a.daysBelowTarget);
+
+  // Delay log intentionally ignores the date-range filter — a delay reported
+  // outside the current window but still open is exactly what a PM needs to
+  // see, not something a "last 30 days" filter should hide.
+  const allDelays = await getAllDelays(supabase);
+  const delayLog = projectId ? allDelays.filter((d) => d.project_id === projectId) : allDelays;
+
+  const delaysByProject = new Map<string, ProjectDelay[]>();
+  for (const d of delayLog) {
+    const list = delaysByProject.get(d.project_id) ?? [];
+    list.push(d);
+    delaysByProject.set(d.project_id, list);
+  }
+
+  const avgDaysToRectifyByProject = Array.from(delaysByProject.entries()).map(([pid, ds]) => ({
+    projectId: pid,
+    projectName: projectNameById.get(pid) ?? "Unknown Project",
+    avgDays: averageDaysToRectify(ds),
+  }));
+
+  const delayMetrics: DelayMetrics = {
+    delayLog,
+    daysBelowTargetByProject,
+    avgDaysToRectifyPortfolio: averageDaysToRectify(delayLog),
+    avgDaysToRectifyByProject,
+    openDelayCount: delayLog.filter((d) => d.status === "open").length,
+  };
+
   return {
     projectStatus,
     completionTrend,
@@ -389,5 +494,7 @@ export async function getReportsData(
     ppcTrend,
     resourceUtilization,
     punchListMetrics,
+    dailyPpcTrend,
+    delayMetrics,
   };
 }

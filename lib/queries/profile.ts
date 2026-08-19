@@ -1,9 +1,43 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import type { UserRole } from "@/types/database";
 
 export interface UpdateProfilePayload {
   full_name: string;
   phone?: string | null;
+}
+
+export interface UserContactProfile {
+  id: string;
+  full_name: string | null;
+  email: string;
+  role: UserRole;
+  phone: string | null;
+  avatar_url: string | null;
+}
+
+/**
+ * Basic contact info for any user — used by the read-only profile/contact
+ * card. Deliberately selects only what's meant to be visible to other
+ * dashboard users (name, role, email, phone, avatar); users_select_all RLS
+ * technically allows reading every column, but this keeps the query itself
+ * scoped to what the UI is meant to show.
+ */
+export async function getUserProfile(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<UserContactProfile | null> {
+  const { data, error } = await (supabase.from("users") as any)
+    .select("id, full_name, email, role, phone, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching user profile:", error);
+    throw new Error(`Failed to load profile: ${error.message}`);
+  }
+
+  return data as UserContactProfile | null;
 }
 
 /**

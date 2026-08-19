@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { X, Loader2, Calendar, User, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -185,7 +186,13 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateSuccess }: Task
 
           <div className="p-3 bg-secondary/50 rounded-xl border border-border flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Assignee:</span>
-            <span className="font-semibold text-foreground">{task.assignee_name || "Unassigned"}</span>
+            {task.assignee_id && task.assignee_name ? (
+              <Link href={`/profile/${task.assignee_id}`} className="font-semibold text-primary hover:underline">
+                {task.assignee_name}
+              </Link>
+            ) : (
+              <span className="font-semibold text-foreground">Unassigned</span>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">

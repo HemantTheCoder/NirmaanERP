@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+
+const FADE_DURATION_MS = 500;
 
 interface BrandedLoadingProps {
   minDurationMs?: number; // default 3500ms (3.5 seconds)
@@ -17,18 +19,40 @@ export function BrandedLoading({
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
+  // Callers pass onComplete as an inline arrow, so its identity changes on
+  // every parent render. Holding it in a ref keeps it out of the timer
+  // effect's dependency array — otherwise any parent re-render during the
+  // countdown (auth resolving, a route transition) would tear down and
+  // restart the timer, and a parent that re-renders steadily would keep the
+  // splash on screen forever.
+  const onCompleteRef = useRef(onComplete);
   useEffect(() => {
+    onCompleteRef.current = onComplete;
+  });
+
+  // Runs once on mount: the countdown starts exactly once and nothing the
+  // parent does can restart it. minDurationMs is read from the first render,
+  // which is correct — callers pass a fixed duration.
+  useEffect(() => {
+    let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+
     const timer = setTimeout(() => {
       setFading(true);
-      const fadeTimer = setTimeout(() => {
+      fadeTimer = setTimeout(() => {
         setVisible(false);
-        if (onComplete) onComplete();
-      }, 500); // 500ms smooth fade-out
-      return () => clearTimeout(fadeTimer);
+        onCompleteRef.current?.();
+      }, FADE_DURATION_MS);
     }, minDurationMs);
 
-    return () => clearTimeout(timer);
-  }, [minDurationMs, onComplete]);
+    // Both timers are cleared here. Previously the fade cleanup was returned
+    // from the setTimeout callback rather than the effect, so it never ran and
+    // the fade timer could fire after unmount.
+    return () => {
+      clearTimeout(timer);
+      if (fadeTimer) clearTimeout(fadeTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!visible) return null;
 

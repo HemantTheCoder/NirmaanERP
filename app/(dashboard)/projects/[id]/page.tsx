@@ -7,6 +7,7 @@ import { getProjectDocuments } from "@/lib/queries/documents";
 import { getProjectBudgetSummary } from "@/lib/queries/finance";
 import { getProjectPunchItems } from "@/lib/queries/punch_list";
 import { getTodayDpr, getProjectDprHistory } from "@/lib/queries/dpr";
+import { getOpenDelay, getDelayHistory } from "@/lib/queries/delays";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -56,6 +57,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     todayDpr,
     dprHistory,
     teamMembers,
+    openDelay,
+    delayHistory,
   ] = await Promise.all([
     getProjectById(supabase, id),
     getProjectResources(supabase, id),
@@ -65,6 +68,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     getTodayDpr(supabase, id),
     getProjectDprHistory(supabase, id),
     getProjectManagers(supabase),
+    getOpenDelay(supabase, id),
+    getDelayHistory(supabase, id),
   ]);
 
   if (!data) {
@@ -81,6 +86,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialPunchItems={punchItems}
       initialTodayDpr={todayDpr}
       initialDprHistory={dprHistory}
+      initialOpenDelay={openDelay}
+      initialDelayHistory={delayHistory}
       teamMembers={teamMembers}
       userId={user.id}
       userRole={userRole}

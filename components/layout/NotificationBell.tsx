@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCheck, CalendarDays, CheckSquare, RefreshCw, ClipboardList, ShieldAlert, AlertTriangle } from "lucide-react";
+import { Bell, CheckCheck, CalendarDays, CheckSquare, RefreshCw, ClipboardList, ShieldAlert, AlertTriangle, IndianRupee, Target, CheckCircle2, MessageSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getNotifications, markNotificationRead, markAllRead, type AppNotification, type NotificationType } from "@/lib/queries/notifications";
 import { formatRelativeTime, cn } from "@/lib/utils";
@@ -42,6 +42,31 @@ const TYPE_CONFIG: Record<
     icon: AlertTriangle,
     bg: "bg-amber-100 dark:bg-amber-950/60",
     iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  expense_status_change: {
+    icon: IndianRupee,
+    bg: "bg-emerald-100 dark:bg-emerald-950/60",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+  },
+  ppc_below_target: {
+    icon: Target,
+    bg: "bg-amber-100 dark:bg-amber-950/60",
+    iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  delay_reported: {
+    icon: ShieldAlert,
+    bg: "bg-rose-100 dark:bg-rose-950/60",
+    iconColor: "text-rose-600 dark:text-rose-400",
+  },
+  delay_rectified: {
+    icon: CheckCircle2,
+    bg: "bg-emerald-100 dark:bg-emerald-950/60",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+  },
+  new_message: {
+    icon: MessageSquare,
+    bg: "bg-indigo-100 dark:bg-indigo-950/60",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
   },
 };
 

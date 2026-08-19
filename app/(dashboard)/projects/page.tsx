@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProjects, getProjectManagers, getClientOptions } from "@/lib/queries/projects";
+import { getOpenDelaysByProject } from "@/lib/queries/delays";
+import { getLatestPpcByProject } from "@/lib/queries/dpr";
 import { ProjectsView } from "@/components/projects/ProjectsView";
 import type { UserRole } from "@/types/database";
 
@@ -33,10 +35,12 @@ export default async function ProjectsPage() {
   }
 
   // Fetch projects, project managers, and client options in parallel
-  const [projects, managers, clients] = await Promise.all([
+  const [projects, managers, clients, openDelaysByProject, latestPpcByProject] = await Promise.all([
     getProjects(supabase),
     getProjectManagers(supabase),
     getClientOptions(supabase),
+    getOpenDelaysByProject(supabase),
+    getLatestPpcByProject(supabase),
   ]);
 
   return (
@@ -53,6 +57,8 @@ export default async function ProjectsPage() {
         managers={managers}
         clients={clients}
         userRole={userRole}
+        openDelaysByProject={openDelaysByProject}
+        latestPpcByProject={latestPpcByProject}
       />
     </div>
   );

@@ -28,14 +28,21 @@ import {
   Edit2,
   Trash2,
   ExternalLink,
+  ShieldAlert,
+  Target,
 } from "lucide-react";
 import type { UserRole } from "@/types/database";
+import type { ProjectDelay } from "@/lib/queries/delays";
+import { PPC_TARGET_PERCENT } from "@/lib/queries/dpr";
+import { cn } from "@/lib/utils";
 
 interface ProjectsViewProps {
   initialProjects: ProjectWithManager[];
   managers: ProjectManagerOption[];
   clients?: ClientOption[];
   userRole: UserRole;
+  openDelaysByProject?: Record<string, ProjectDelay>;
+  latestPpcByProject?: Record<string, { ppc: number; report_date: string }>;
 }
 
 export function ProjectsView({
@@ -43,6 +50,8 @@ export function ProjectsView({
   managers,
   clients = [],
   userRole,
+  openDelaysByProject = {},
+  latestPpcByProject = {},
 }: ProjectsViewProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -266,6 +275,37 @@ export function ProjectsView({
               className="bg-card border border-border rounded-xl p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between relative group"
             >
               <div>
+                {/* Delay / PPC indicators — surfaced on the card so a slipping
+                    project is visible without opening it or a report */}
+                {(openDelaysByProject[project.id] || latestPpcByProject[project.id]) && (
+                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                    {openDelaysByProject[project.id] && (
+                      <span
+                        title={openDelaysByProject[project.id].reason}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
+                      >
+                        <ShieldAlert className="w-3 h-3" />
+                        Delay Active
+                      </span>
+                    )}
+
+                    {latestPpcByProject[project.id] && (
+                      <span
+                        title={`Latest PPC, ${latestPpcByProject[project.id].report_date}`}
+                        className={cn(
+                          "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-lg",
+                          latestPpcByProject[project.id].ppc >= PPC_TARGET_PERCENT
+                            ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                            : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
+                        )}
+                      >
+                        <Target className="w-3 h-3" />
+                        PPC {latestPpcByProject[project.id].ppc}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <StatusBadge
