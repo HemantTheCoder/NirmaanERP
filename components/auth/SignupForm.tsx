@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Loader2, Mail, Lock, User, ChevronDown, Eye, EyeOff, MailCheck } from "lucide-react";
 import type { UserRole } from "@/types/database";
 import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/common/TurnstileWidget";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -116,7 +117,16 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
+      <GoogleAuthButton label="Sign up with Google" role={role} />
+
+      <div className="flex items-center gap-3 py-1">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-slate-500">or continue with email</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
       {/* Full name */}
       <div className="space-y-1.5">
         <label htmlFor="signup-name" className="text-sm font-medium text-slate-300">
@@ -254,6 +264,7 @@ export function SignupForm() {
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         {loading ? "Creating account…" : "Create account"}
       </button>
-    </form>
+      </form>
+    </div>
   );
 }
