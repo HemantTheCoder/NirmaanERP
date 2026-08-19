@@ -122,12 +122,20 @@ export async function updateUserRole(
     }
   }
 
-  const { error } = await (supabase.from("users") as any)
+  const { data, error } = await (supabase.from("users") as any)
     .update({ role: newRole })
-    .eq("id", targetUserId);
+    .eq("id", targetUserId)
+    .select("id");
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // A blocked-by-RLS update reports no error and zero rows, not a failure —
+  // check explicitly so a policy gap surfaces as an error instead of the UI
+  // optimistically showing a change that never reached the database.
+  if (!data || data.length === 0) {
+    return { success: false, error: "Update was not applied (permission denied)." };
   }
 
   return { success: true };
@@ -158,12 +166,17 @@ export async function toggleUserActive(
     }
   }
 
-  const { error } = await (supabase.from("users") as any)
+  const { data, error } = await (supabase.from("users") as any)
     .update({ is_active: isActive })
-    .eq("id", targetUserId);
+    .eq("id", targetUserId)
+    .select("id");
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Update was not applied (permission denied)." };
   }
 
   return { success: true };
