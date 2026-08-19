@@ -41,34 +41,24 @@ export function SignupForm() {
     setLoading(true);
     setError(null);
 
-    const verifyRes = await fetch("/api/auth/verify-turnstile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: turnstileToken, action: "signup" }),
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, role },
+        captchaToken: turnstileToken,
+      },
     });
-    const verifyResult = await verifyRes.json().catch(() => ({ success: false }));
 
     // Tokens are single-use regardless of outcome — always reset so the next
     // attempt gets a fresh challenge instead of silently failing.
     turnstileRef.current?.reset();
     setTurnstileToken(null);
 
-    if (!verifyResult.success) {
-      setError("Verification failed. Please complete the challenge again.");
-      setLoading(false);
-      return;
-    }
-
-    const { data, error: signupError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, role },
-      },
-    });
-
     if (signupError) {
-      if (signupError.message.toLowerCase().includes("rate limit") || signupError.status === 429) {
+      if (signupError.message.toLowerCase().includes("captcha")) {
+        setError("Verification failed. Please complete the challenge again.");
+      } else if (signupError.message.toLowerCase().includes("rate limit") || signupError.status === 429) {
         setError(
           "Supabase email signup rate limit reached (free tier SMTP limits rapid new user signups). Please sign in using an existing demo account or try again in a few minutes."
         );
