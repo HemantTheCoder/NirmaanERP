@@ -37,7 +37,8 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
-    pathname === "/auth/callback" || // OAuth redirect target, hit before a session cookie exists
+    pathname === "/forgot-password" ||
+    pathname === "/auth/callback" || // OAuth/recovery redirect target, hit before a session cookie exists
     pathname.startsWith("/_next") ||
     pathname.startsWith("/public") ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/);

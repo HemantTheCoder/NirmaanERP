@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
@@ -97,9 +98,17 @@ export function LoginForm() {
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label htmlFor="login-password" className="text-sm font-medium text-slate-300">
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="login-password" className="text-sm font-medium text-slate-300">
+            Password
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
