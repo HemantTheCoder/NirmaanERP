@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useMemo, useEffect } from "react";
 import {
   Download,
   Printer,
@@ -49,6 +49,23 @@ interface ReportsViewProps {
   budgetAnalytics?: CompanyBudgetAnalytics;
 }
 
+const DAILY_PPC_TAB_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ec4899", "#06b6d4", "#8b5cf6", "#f43f5e", "#84cc16"];
+
+/** Colors each point by target pass/fail — used for the single-project Daily PPC line. */
+function DailyPpcDot(props: any) {
+  const { cx, cy, payload } = props;
+  if (cx === undefined || cy === undefined) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={payload.ppc >= PPC_TARGET_PERCENT ? "#10b981" : "#f43f5e"}
+      stroke="none"
+    />
+  );
+}
+
 const DATE_RANGE_OPTIONS: { value: DateRangeFilter; label: string }[] = [
   { value: "30d", label: "Last 30 Days" },
   { value: "60d", label: "Last 60 Days" },
@@ -76,6 +93,35 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
   const [dateRange, setDateRange] = useState<DateRangeFilter>("60d");
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
+  const [dailyPpcProjectId, setDailyPpcProjectId] = useState<string>("all");
+
+  // The project each visitor is looking at shifts whenever the date range or
+  // the global project filter changes and refetches `data` — reset the local
+  // tab so it never points at a project that's no longer in the fetched set.
+  useEffect(() => {
+    setDailyPpcProjectId("all");
+  }, [data]);
+
+  const dailyPpcProjects = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of data.dailyPpcTrend) {
+      if (!seen.has(item.projectId)) seen.set(item.projectId, item.projectName);
+    }
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data.dailyPpcTrend]);
+
+  const dailyPpcColorByProject = useMemo(() => {
+    const map = new Map<string, string>();
+    dailyPpcProjects.forEach((p, i) => map.set(p.id, DAILY_PPC_TAB_COLORS[i % DAILY_PPC_TAB_COLORS.length]));
+    return map;
+  }, [dailyPpcProjects]);
+
+  const filteredDailyPpcTrend = useMemo(() => {
+    if (dailyPpcProjectId === "all") return data.dailyPpcTrend;
+    return data.dailyPpcTrend.filter((d) => d.projectId === dailyPpcProjectId);
+  }, [data.dailyPpcTrend, dailyPpcProjectId]);
 
   const handleFilterChange = useCallback(
     (newDateRange: DateRangeFilter, newProjectId: string) => {
@@ -161,7 +207,7 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
   const exportDailyPpcCsv = () => {
     const rows = [
       ["Date", "Project", "PPC (%)"],
-      ...data.dailyPpcTrend.map((item) => [item.date, item.projectName, `${item.ppc}%`]),
+      ...filteredDailyPpcTrend.map((item) => [item.date, item.projectName, `${item.ppc}%`]),
     ];
     downloadCsv("daily_ppc_dpr_checklist", rows);
   };
@@ -911,12 +957,49 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
             </button>
           </div>
 
+          {/* Per-project tabs — isolates one project's trend as a clean line,
+              since the combined view below can only show pass/fail color per
+              dot, not which project each point belongs to (that's tooltip-only). */}
+          {dailyPpcProjects.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1 p-1 mb-4 rounded-lg bg-secondary border border-border no-print">
+              <button
+                onClick={() => setDailyPpcProjectId("all")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
+                  dailyPpcProjectId === "all"
+                    ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All Projects
+              </button>
+              {dailyPpcProjects.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setDailyPpcProjectId(p.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all",
+                    dailyPpcProjectId === p.id
+                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: dailyPpcColorByProject.get(p.id) }}
+                  />
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="h-64 w-full">
-            {data.dailyPpcTrend.length === 0 ? (
+            {filteredDailyPpcTrend.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 No DPR checklists recorded in the selected range yet.
               </div>
-            ) : (
+            ) : dailyPpcProjectId === "all" ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -956,10 +1039,10 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
                     }}
                   />
                   <Scatter
-                    data={data.dailyPpcTrend}
+                    data={filteredDailyPpcTrend}
                     fill="#f59e0b"
                   >
-                    {data.dailyPpcTrend.map((entry, index) => (
+                    {filteredDailyPpcTrend.map((entry, index) => (
                       <Cell
                         key={`ppc-dot-${index}`}
                         fill={entry.ppc >= PPC_TARGET_PERCENT ? "#10b981" : "#f43f5e"}
@@ -967,6 +1050,48 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
                     ))}
                   </Scatter>
                 </ScatterChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={filteredDailyPpcTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
+                  <YAxis
+                    domain={[0, 100]}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickFormatter={(v) => `${v}%`}
+                    tickLine={false}
+                  />
+                  <ReferenceLine
+                    y={PPC_TARGET_PERCENT}
+                    stroke="#f59e0b"
+                    strokeDasharray="4 4"
+                    label={{ value: `${PPC_TARGET_PERCENT}% target`, position: "insideTopLeft", fontSize: 10, fill: "#f59e0b" }}
+                  />
+                  <Tooltip
+                    formatter={(val: any) => [`${val}%`, "PPC"]}
+                    labelFormatter={(label) =>
+                      `${dailyPpcProjects.find((p) => p.id === dailyPpcProjectId)?.name ?? ""} — ${label}`
+                    }
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "0.5rem",
+                      fontSize: "12px",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ppc"
+                    name="PPC %"
+                    stroke={dailyPpcColorByProject.get(dailyPpcProjectId) ?? "#6366f1"}
+                    strokeWidth={2.5}
+                    dot={<DailyPpcDot />}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             )}
           </div>
