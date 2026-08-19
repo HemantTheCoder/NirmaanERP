@@ -245,6 +245,42 @@ export async function submitDpr(
 }
 
 /**
+ * Most recent PPC per project, keyed by project_id. Only reports that actually
+ * have a checklist contribute, so a project with no plan recorded is absent
+ * rather than showing a misleading 0%.
+ */
+export async function getLatestPpcByProject(
+  supabase: SupabaseClient<Database>
+): Promise<Record<string, { ppc: number; report_date: string }>> {
+  const { data, error } = await (supabase.from("daily_progress_reports") as any)
+    .select(`id, project_id, report_date, checklist_items:dpr_checklist_items(is_completed)`)
+    .order("report_date", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching PPC by project:", error);
+    throw new Error(`Failed to load PPC indicators: ${error.message}`);
+  }
+
+  const latest: Record<string, { ppc: number; report_date: string }> = {};
+
+  for (const row of data || []) {
+    // Rows arrive newest-first, so the first hit per project wins
+    if (latest[row.project_id]) continue;
+
+    const items = (row.checklist_items || []) as { is_completed: boolean }[];
+    if (items.length === 0) continue;
+
+    const completed = items.filter((i) => i.is_completed).length;
+    latest[row.project_id] = {
+      ppc: Math.round((completed / items.length) * 1000) / 10,
+      report_date: row.report_date,
+    };
+  }
+
+  return latest;
+}
+
+/**
  * Fetch company-wide today DPR coverage (e.g. 3 of 4 projects reported today)
  */
 export async function getDprCompanyStats(

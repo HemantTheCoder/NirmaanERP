@@ -32,6 +32,8 @@ import type { ProjectDocumentItem } from "@/lib/queries/documents";
 import type { ProjectBudgetSummary } from "@/lib/queries/finance";
 import type { PunchItem } from "@/lib/queries/punch_list";
 import type { DailyProgressReport } from "@/lib/queries/dpr";
+import type { ProjectDelay } from "@/lib/queries/delays";
+import { DelayStatusPanel } from "@/components/projects/DelayStatusPanel";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +54,8 @@ interface ProjectDetailViewProps {
   initialPunchItems: PunchItem[];
   initialTodayDpr: DailyProgressReport | null;
   initialDprHistory: DailyProgressReport[];
+  initialOpenDelay: ProjectDelay | null;
+  initialDelayHistory: ProjectDelay[];
   teamMembers?: any[];
   userId: string;
   userRole: UserRole;
@@ -66,6 +70,8 @@ export function ProjectDetailView({
   initialPunchItems,
   initialTodayDpr,
   initialDprHistory,
+  initialOpenDelay,
+  initialDelayHistory,
   teamMembers = [],
   userId,
   userRole,
@@ -171,6 +177,14 @@ export function ProjectDetailView({
           </div>
         </div>
       </div>
+
+      {/* Delay status — surfaced at project level, not buried in a tab */}
+      <DelayStatusPanel
+        projectId={project.id}
+        initialOpenDelay={initialOpenDelay}
+        initialHistory={initialDelayHistory}
+        user={{ id: userId, role: userRole }}
+      />
 
       {/* Tab Switcher & Content Wrapper */}
       <div className="space-y-4">

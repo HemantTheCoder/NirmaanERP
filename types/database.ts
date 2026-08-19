@@ -8,7 +8,12 @@ export type NotificationType =
   | "status_change"
   | "approval_needed"
   | "safety"
-  | "grievance";
+  | "grievance"
+  | "expense_status_change"
+  | "ppc_below_target"
+  | "delay_reported"
+  | "delay_rectified"
+  | "new_message";
 export type TenderStatus = "draft" | "published" | "closed" | "awarded" | "cancelled";
 export type BidStatus = "submitted" | "under_review" | "shortlisted" | "awarded" | "rejected";
 
@@ -504,6 +509,47 @@ export interface Database {
           created_at?: string;
         };
       };
+      project_delays: {
+        Row: {
+          id: string;
+          project_id: string;
+          dpr_id: string | null;
+          reported_by: string;
+          reported_date: string;
+          reason: string;
+          status: DelayStatus;
+          rectified_by: string | null;
+          rectified_at: string | null;
+          rectification_notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          dpr_id?: string | null;
+          reported_by: string;
+          reported_date?: string;
+          reason: string;
+          status?: DelayStatus;
+          rectified_by?: string | null;
+          rectified_at?: string | null;
+          rectification_notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          dpr_id?: string | null;
+          reported_by?: string;
+          reported_date?: string;
+          reason?: string;
+          status?: DelayStatus;
+          rectified_by?: string | null;
+          rectified_at?: string | null;
+          rectification_notes?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -521,6 +567,7 @@ export interface Database {
       incident_type: IncidentType;
       incident_severity: IncidentSeverity;
       incident_status: IncidentStatus;
+      delay_status: DelayStatus;
     };
   };
 }
@@ -533,3 +580,4 @@ export type GrievanceStatus = "open" | "in_progress" | "resolved" | "closed";
 export type IncidentType = "near_miss" | "incident";
 export type IncidentSeverity = "low" | "medium" | "high" | "critical";
 export type IncidentStatus = "reported" | "under_review" | "action_taken" | "closed";
+export type DelayStatus = "open" | "rectified";

@@ -7,7 +7,12 @@ export type NotificationType =
   | "status_change"
   | "approval_needed"
   | "safety"
-  | "grievance";
+  | "grievance"
+  | "expense_status_change"
+  | "ppc_below_target"
+  | "delay_reported"
+  | "delay_rectified"
+  | "new_message";
 
 export interface AppNotification {
   id: string;
