@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -40,10 +40,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Too many draft requests. Try again shortly." }, { status: 429 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "AI drafting isn't configured — add ANTHROPIC_API_KEY to enable this." },
+        { error: "AI drafting isn't configured — add GEMINI_API_KEY to enable this." },
         { status: 500 }
       );
     }
@@ -85,15 +85,13 @@ Planned items completed today: ${doneItems.length ? doneItems.join("; ") : "none
 Planned items still pending: ${pendingItems.length ? pendingItems.join("; ") : "none"}
 ${typeof delaysEncountered === "string" && delaysEncountered.trim() ? `Delays noted: ${delaysEncountered.trim()}` : ""}`;
 
-    const anthropic = new Anthropic({ apiKey });
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-5",
-      max_tokens: 300,
-      messages: [{ role: "user", content: prompt }],
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
     });
 
-    const textBlock = message.content.find((b) => b.type === "text");
-    const summary = textBlock && "text" in textBlock ? textBlock.text.trim() : "";
+    const summary = (response.text ?? "").trim();
 
     if (!summary) {
       return NextResponse.json({ error: "AI draft came back empty. Try again." }, { status: 502 });
