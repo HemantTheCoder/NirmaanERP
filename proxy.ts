@@ -37,7 +37,6 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
-    pathname === "/api/auth/verify-turnstile" || // called during signup, before any session exists
     pathname === "/auth/callback" || // OAuth redirect target, hit before a session cookie exists
     pathname.startsWith("/_next") ||
     pathname.startsWith("/public") ||
