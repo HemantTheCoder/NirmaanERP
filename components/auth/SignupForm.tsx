@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, Mail, Lock, User, ChevronDown, Eye, EyeOff, MailCheck } from "lucide-react";
 import type { UserRole } from "@/types/database";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/common/TurnstileWidget";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 const SIGNUP_ROLES: { value: Exclude<UserRole, "admin" | "contractor">; label: string }[] = [
   { value: "project_manager", label: "Project Manager" },
@@ -24,11 +27,37 @@ export function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!turnstileToken) {
+      setError("Please complete the verification challenge.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
+    const verifyRes = await fetch("/api/auth/verify-turnstile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: turnstileToken, action: "signup" }),
+    });
+    const verifyResult = await verifyRes.json().catch(() => ({ success: false }));
+
+    // Tokens are single-use regardless of outcome — always reset so the next
+    // attempt gets a fresh challenge instead of silently failing.
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
+
+    if (!verifyResult.success) {
+      setError("Verification failed. Please complete the challenge again.");
+      setLoading(false);
+      return;
+    }
 
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
@@ -192,6 +221,32 @@ export function SignupForm() {
         </p>
       </div>
 
+      {/* Bot-protection challenge */}
+      {TURNSTILE_SITE_KEY && (
+        <div className="flex justify-center">
+          <TurnstileWidget
+            ref={turnstileRef}
+            siteKey={TURNSTILE_SITE_KEY}
+            action="signup"
+            onToken={(token) => {
+              setTurnstileToken(token);
+              setError(null);
+            }}
+            onExpire={() => setTurnstileToken(null)}
+            onError={(code) => {
+              setTurnstileToken(null);
+              // errorCode's exact type isn't pinned down in Cloudflare's docs
+              // (number vs numeric string) — coerce before comparing.
+              setError(
+                String(code) === "110200"
+                  ? "Verification widget isn't authorized for this domain yet. Contact an admin to add it in the Cloudflare Turnstile dashboard."
+                  : "Verification widget failed to load. Please refresh and try again."
+              );
+            }}
+          />
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
@@ -203,7 +258,7 @@ export function SignupForm() {
       <button
         id="signup-submit"
         type="submit"
-        disabled={loading}
+        disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
         className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm transition-all shadow-lg shadow-indigo-500/20 mt-2"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
