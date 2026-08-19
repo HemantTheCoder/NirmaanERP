@@ -118,7 +118,7 @@ export function SignupForm() {
 
   return (
     <div className="space-y-4">
-      <GoogleAuthButton label="Sign up with Google" />
+      <GoogleAuthButton label="Sign up with Google" role={role} />
 
       <div className="flex items-center gap-3 py-1">
         <div className="h-px flex-1 bg-white/10" />

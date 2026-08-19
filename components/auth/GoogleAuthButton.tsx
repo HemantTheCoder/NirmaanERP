@@ -5,9 +5,15 @@ import { createClient } from "@/lib/supabase/client";
 
 interface GoogleAuthButtonProps {
   label: string;
+  /** Only meaningful on signup — Google OAuth has no equivalent of
+   * signUp()'s `options.data`, so the chosen role can't travel with the
+   * request the normal way. Carried through the callback URL instead; the
+   * route handler re-validates it against the same allowed set before ever
+   * writing it. */
+  role?: string;
 }
 
-export function GoogleAuthButton({ label }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ label, role }: GoogleAuthButtonProps) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,9 +22,12 @@ export function GoogleAuthButton({ label }: GoogleAuthButtonProps) {
     setLoading(true);
     setError(null);
 
+    const redirectTo = new URL("/auth/callback", window.location.origin);
+    if (role) redirectTo.searchParams.set("role", role);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: redirectTo.toString() },
     });
 
     // On success the browser is already navigating to Google — nothing left
