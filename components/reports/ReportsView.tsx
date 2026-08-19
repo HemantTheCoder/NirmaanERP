@@ -15,6 +15,7 @@ import {
   Clock,
   Target,
   Cpu,
+  ShieldAlert,
 } from "lucide-react";
 import {
   PieChart,
@@ -24,12 +25,16 @@ import {
   Bar,
   LineChart,
   Line,
+  ScatterChart,
+  Scatter,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,
 } from "recharts";
+import { PPC_TARGET_PERCENT } from "@/lib/queries/dpr";
 import { createClient } from "@/lib/supabase/client";
 import {
   getReportsData,
@@ -151,6 +156,30 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
       ...data.ppcTrend.map((item) => [item.weekLabel, `${item.ppc}%`, item.dueCount, item.completedOnTimeCount]),
     ];
     downloadCsv("ppc_last_planner_system", rows);
+  };
+
+  const exportDailyPpcCsv = () => {
+    const rows = [
+      ["Date", "Project", "PPC (%)"],
+      ...data.dailyPpcTrend.map((item) => [item.date, item.projectName, `${item.ppc}%`]),
+    ];
+    downloadCsv("daily_ppc_dpr_checklist", rows);
+  };
+
+  const exportDelayLogCsv = () => {
+    const rows = [
+      ["Project", "Reported Date", "Reason", "Status", "Days to Rectify", "Rectified By", "Rectification Notes"],
+      ...data.delayMetrics.delayLog.map((d) => [
+        d.project_name ?? "",
+        d.reported_date,
+        d.reason,
+        d.status,
+        d.days_to_rectify ?? "",
+        d.rectifier_name ?? "",
+        d.rectification_notes ?? "",
+      ]),
+    ];
+    downloadCsv("delay_log", rows);
   };
 
   const exportResourceUtilizationCsv = () => {
@@ -852,6 +881,215 @@ export function ReportsView({ initialData, budgetAnalytics }: ReportsViewProps) 
             </div>
           </div>
         )}
+
+        {/* Card 10: Daily Site PPC — from the DPR checklist (planned vs. actually
+            completed line items per day). This is a different metric from Card 6's
+            "Percent Plan Complete" above, which is a weekly task-due-date reliability
+            rate — both are conventionally called "PPC" in construction PM usage, so
+            the subtitle spells out the distinction rather than letting two
+            differently-computed numbers share an unqualified name. */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center">
+                <Target className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Daily Site PPC</h3>
+                <p className="text-xs text-muted-foreground">
+                  From the DPR checklist — % of planned work items actually completed each day, target {PPC_TARGET_PERCENT}%
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={exportDailyPpcCsv}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          </div>
+
+          <div className="h-64 w-full">
+            {data.dailyPpcTrend.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+                No DPR checklists recorded in the selected range yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="date"
+                    type="category"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickLine={false}
+                    allowDuplicatedCategory={false}
+                  />
+                  <YAxis
+                    dataKey="ppc"
+                    domain={[0, 100]}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickFormatter={(v) => `${v}%`}
+                    tickLine={false}
+                  />
+                  <ReferenceLine
+                    y={PPC_TARGET_PERCENT}
+                    stroke="#f59e0b"
+                    strokeDasharray="4 4"
+                    label={{ value: `${PPC_TARGET_PERCENT}% target`, position: "insideTopLeft", fontSize: 10, fill: "#f59e0b" }}
+                  />
+                  <Tooltip
+                    formatter={(val: any) => [`${val}%`, "PPC"]}
+                    labelFormatter={(label, payload) =>
+                      payload && payload[0] ? `${payload[0].payload.projectName} — ${label}` : label
+                    }
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "0.5rem",
+                      fontSize: "12px",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Scatter
+                    data={data.dailyPpcTrend}
+                    fill="#f59e0b"
+                  >
+                    {data.dailyPpcTrend.map((entry, index) => (
+                      <Cell
+                        key={`ppc-dot-${index}`}
+                        fill={entry.ppc >= PPC_TARGET_PERCENT ? "#10b981" : "#f43f5e"}
+                      />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {data.delayMetrics.daysBelowTargetByProject.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border/60">
+              <p className="text-xs font-semibold text-foreground mb-2">Days Below Target by Project</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {data.delayMetrics.daysBelowTargetByProject.map((p) => (
+                  <div
+                    key={p.projectId}
+                    className="flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-secondary/40 border border-border"
+                  >
+                    <span className="text-foreground font-medium truncate">{p.projectName}</span>
+                    <span
+                      className={cn(
+                        "font-semibold shrink-0 ml-2",
+                        p.daysBelowTarget > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {p.daysBelowTarget} / {p.totalDaysReported} days
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Card 11: Delay Log */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col report-card lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center">
+                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Delay Log</h3>
+                <p className="text-xs text-muted-foreground">
+                  {data.delayMetrics.openDelayCount} open ·{" "}
+                  {data.delayMetrics.avgDaysToRectifyPortfolio !== null
+                    ? `${data.delayMetrics.avgDaysToRectifyPortfolio} days avg. to rectify`
+                    : "no rectified delays yet"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={exportDelayLogCsv}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors no-print"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          </div>
+
+          {data.delayMetrics.delayLog.length === 0 ? (
+            <div className="py-8 flex items-center justify-center text-xs text-muted-foreground">
+              No delays reported in the selected scope.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="pb-2 pr-3 font-medium">Project</th>
+                    <th className="pb-2 pr-3 font-medium">Reason</th>
+                    <th className="pb-2 pr-3 font-medium">Reported</th>
+                    <th className="pb-2 pr-3 font-medium">Status</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Days to Rectify</th>
+                    <th className="pb-2 font-medium">Rectified By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.delayMetrics.delayLog.map((d) => (
+                    <tr key={d.id} className="border-b border-border/50 last:border-0">
+                      <td className="py-2 pr-3 text-foreground font-medium whitespace-nowrap">{d.project_name}</td>
+                      <td className="py-2 pr-3 text-foreground max-w-xs truncate" title={d.reason}>
+                        {d.reason}
+                      </td>
+                      <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">{d.reported_date}</td>
+                      <td className="py-2 pr-3">
+                        <span
+                          className={cn(
+                            "px-2 py-0.5 rounded-md font-semibold text-[11px]",
+                            d.status === "open"
+                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
+                              : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                          )}
+                        >
+                          {d.status}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-right text-foreground font-medium">
+                        {d.days_to_rectify !== null && d.days_to_rectify !== undefined ? d.days_to_rectify : "—"}
+                      </td>
+                      <td className="py-2 text-muted-foreground whitespace-nowrap">{d.rectifier_name ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {data.delayMetrics.avgDaysToRectifyByProject.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border/60">
+              <p className="text-xs font-semibold text-foreground mb-2">Avg. Days to Rectify by Project</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {data.delayMetrics.avgDaysToRectifyByProject.map((p) => (
+                  <div
+                    key={p.projectId}
+                    className="flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-secondary/40 border border-border"
+                  >
+                    <span className="text-foreground font-medium truncate">{p.projectName}</span>
+                    <span className="font-semibold text-foreground shrink-0 ml-2">
+                      {p.avgDays !== null ? `${p.avgDays} days` : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
