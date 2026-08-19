@@ -26,6 +26,7 @@ import {
   ListChecks,
   Link2,
   CheckSquare,
+  Sparkles,
 } from "lucide-react";
 import {
   submitDpr,
@@ -196,6 +197,8 @@ export function DailyProgressReportView({
   const [workCompleted, setWorkCompleted] = useState<string>(initialTodayReport?.work_completed || "");
   const [delaysEncountered, setDelaysEncountered] = useState<string>(initialTodayReport?.delays_encountered || "");
   const [photosCount, setPhotosCount] = useState<string>(initialTodayReport ? String(initialTodayReport.photos_count) : "4");
+  const [aiDrafting, setAiDrafting] = useState(false);
+  const [aiDraftError, setAiDraftError] = useState<string | null>(null);
   const [checklist, setChecklist] = useState<ChecklistDraft[]>(
     (initialTodayReport?.checklist_items || []).map((i) => ({
       description: i.description,
@@ -254,6 +257,43 @@ export function DailyProgressReportView({
 
   const updateChecklistItem = (index: number, patch: Partial<ChecklistDraft>) =>
     setChecklist((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+
+  const handleAiDraft = async () => {
+    setAiDrafting(true);
+    setAiDraftError(null);
+
+    try {
+      const res = await fetch("/api/ai/draft-dpr-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          weather,
+          manpowerCount,
+          equipmentUsed,
+          delaysEncountered,
+          checklist: checklist
+            .filter((i) => i.description.trim())
+            .map((i) => ({ description: i.description, is_completed: i.is_completed })),
+        }),
+      });
+
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setAiDraftError(result.error || "Failed to generate a draft.");
+        return;
+      }
+
+      // Drafts, never auto-saves — the author still reviews/edits before
+      // Save Report actually persists anything.
+      setWorkCompleted(result.summary);
+    } catch {
+      setAiDraftError("Failed to reach the AI drafting service.");
+    } finally {
+      setAiDrafting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -548,9 +588,25 @@ export function DailyProgressReportView({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Work Completed Today <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-foreground">
+                  Work Completed Today <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAiDraft}
+                  disabled={aiDrafting}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  title="Draft this from the checklist, manpower, and weather below — review before saving"
+                >
+                  {aiDrafting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  {aiDrafting ? "Drafting…" : "AI Draft"}
+                </button>
+              </div>
               <textarea
                 rows={3}
                 required
@@ -559,6 +615,9 @@ export function DailyProgressReportView({
                 placeholder="Detailed breakdown of activities completed today (e.g. Completed slab casting for Level 4, started column rebar tying for Level 5...)"
                 className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
+              {aiDraftError && (
+                <p className="text-[11px] text-rose-500 mt-1">{aiDraftError}</p>
+              )}
             </div>
 
             {/* Planned Work Checklist — drives PPC */}
