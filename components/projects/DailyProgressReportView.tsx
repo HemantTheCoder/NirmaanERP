@@ -24,6 +24,8 @@ import {
   Trash2,
   Target,
   ListChecks,
+  Link2,
+  CheckSquare,
 } from "lucide-react";
 import {
   submitDpr,
@@ -34,6 +36,7 @@ import {
   type DprChecklistItem,
   type WeatherCondition,
 } from "@/lib/queries/dpr";
+import { updateTaskStatus } from "@/lib/queries/tasks";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -62,6 +65,20 @@ const WEATHER_CONFIG: Record<
 interface ChecklistDraft {
   description: string;
   is_completed: boolean;
+  task_id: string | null;
+}
+
+/** Small tag marking an item as auto-fetched from a task, vs. typed by hand. */
+function FromTaskTag() {
+  return (
+    <span
+      title="Auto-fetched from a task assigned to this project"
+      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 shrink-0"
+    >
+      <Link2 className="w-3 h-3" />
+      from task
+    </span>
+  );
 }
 
 /** Colour a PPC value against the alert target. */
@@ -91,7 +108,17 @@ function PpcBadge({ ppc }: { ppc: number }) {
 }
 
 /** Read-only checklist rendering, used in the submitted card and history log. */
-function ChecklistSummary({ items }: { items: DprChecklistItem[] }) {
+function ChecklistSummary({
+  items,
+  markedDoneTaskIds,
+  markingTaskId,
+  onMarkTaskDone,
+}: {
+  items: DprChecklistItem[];
+  markedDoneTaskIds?: Set<string>;
+  markingTaskId?: string | null;
+  onMarkTaskDone?: (taskId: string) => void;
+}) {
   if (items.length === 0) return null;
 
   return (
@@ -101,24 +128,49 @@ function ChecklistSummary({ items }: { items: DprChecklistItem[] }) {
         Planned Work Checklist ({items.filter((i) => i.is_completed).length} of {items.length} completed)
       </p>
       <ul className="space-y-1">
-        {items.map((item) => (
-          <li key={item.id} className="flex items-start gap-2 text-xs">
-            {item.is_completed ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-            ) : (
-              <X className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
-            )}
-            <span
-              className={cn(
-                item.is_completed
-                  ? "text-muted-foreground line-through"
-                  : "text-foreground font-medium"
+        {items.map((item) => {
+          const alreadyMarked = !!item.task_id && markedDoneTaskIds?.has(item.task_id);
+          const isMarking = !!item.task_id && markingTaskId === item.task_id;
+
+          return (
+            <li key={item.id} className="flex items-start gap-2 text-xs">
+              {item.is_completed ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              ) : (
+                <X className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
               )}
-            >
-              {item.description}
-            </span>
-          </li>
-        ))}
+              <span
+                className={cn(
+                  "flex-1",
+                  item.is_completed
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground font-medium"
+                )}
+              >
+                {item.description}
+              </span>
+              {item.task_id && <FromTaskTag />}
+              {item.is_completed && item.task_id && onMarkTaskDone && (
+                alreadyMarked ? (
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                    Task marked Done
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onMarkTaskDone(item.task_id as string)}
+                    disabled={isMarking}
+                    title="This only affects the task's own status — it does not change any other day's checklist."
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 disabled:opacity-50 shrink-0"
+                  >
+                    <CheckSquare className="w-3 h-3" />
+                    {isMarking ? "Marking…" : "Also mark task as Done"}
+                  </button>
+                )
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -148,12 +200,30 @@ export function DailyProgressReportView({
     (initialTodayReport?.checklist_items || []).map((i) => ({
       description: i.description,
       is_completed: i.is_completed,
+      task_id: i.task_id,
     }))
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Opt-in "also mark task as Done" — deliberately not automatic. Tracked
+  // client-side per session so the button can show confirmation without a
+  // full task refetch; doesn't need to survive a reload.
+  const [markedDoneTaskIds, setMarkedDoneTaskIds] = useState<Set<string>>(new Set());
+  const [markingTaskId, setMarkingTaskId] = useState<string | null>(null);
+
+  const handleMarkTaskDone = async (taskId: string) => {
+    setMarkingTaskId(taskId);
+    const { error } = await updateTaskStatus(supabase, taskId, "done");
+    setMarkingTaskId(null);
+    if (!error) {
+      setMarkedDoneTaskIds((prev) => new Set(prev).add(taskId));
+    } else {
+      setErrorMsg(`Could not update the task's status: ${error.message}`);
+    }
+  };
 
   const todayDateStr = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -171,12 +241,13 @@ export function DailyProgressReportView({
       description: i.description,
       is_completed: i.is_completed,
       sequence: idx,
+      task_id: i.task_id,
       created_at: "",
     }))
   );
 
   const addChecklistItem = () =>
-    setChecklist((prev) => [...prev, { description: "", is_completed: false }]);
+    setChecklist((prev) => [...prev, { description: "", is_completed: false, task_id: null }]);
 
   const removeChecklistItem = (index: number) =>
     setChecklist((prev) => prev.filter((_, i) => i !== index));
@@ -244,6 +315,7 @@ export function DailyProgressReportView({
       description: i.description.trim(),
       is_completed: i.is_completed,
       sequence: idx,
+      task_id: i.task_id,
       created_at: new Date().toISOString(),
     }));
 
@@ -378,7 +450,12 @@ export function DailyProgressReportView({
             </p>
           </div>
 
-          <ChecklistSummary items={todayReport.checklist_items || []} />
+          <ChecklistSummary
+            items={todayReport.checklist_items || []}
+            markedDoneTaskIds={markedDoneTaskIds}
+            markingTaskId={markingTaskId}
+            onMarkTaskDone={handleMarkTaskDone}
+          />
 
           {/* Delays */}
           {todayReport.delays_encountered && (
@@ -526,6 +603,7 @@ export function DailyProgressReportView({
                         item.is_completed && "line-through text-muted-foreground"
                       )}
                     />
+                    {item.task_id && <FromTaskTag />}
                     <button
                       type="button"
                       onClick={() => removeChecklistItem(index)}
@@ -665,7 +743,12 @@ export function DailyProgressReportView({
                         </p>
                       </div>
 
-                      <ChecklistSummary items={report.checklist_items || []} />
+                      <ChecklistSummary
+                        items={report.checklist_items || []}
+                        markedDoneTaskIds={markedDoneTaskIds}
+                        markingTaskId={markingTaskId}
+                        onMarkTaskDone={handleMarkTaskDone}
+                      />
 
                       {report.delays_encountered && (
                         <div className="p-3 rounded-lg bg-rose-50/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 space-y-1">

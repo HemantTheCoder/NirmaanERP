@@ -490,6 +490,7 @@ export interface Database {
           description: string;
           is_completed: boolean;
           sequence: number;
+          task_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -498,6 +499,7 @@ export interface Database {
           description: string;
           is_completed?: boolean;
           sequence?: number;
+          task_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -506,6 +508,7 @@ export interface Database {
           description?: string;
           is_completed?: boolean;
           sequence?: number;
+          task_id?: string | null;
           created_at?: string;
         };
       };
