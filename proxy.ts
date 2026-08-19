@@ -37,7 +37,6 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
-    pathname === "/api/auth/verify-turnstile" || // called during signup, before any session exists
     pathname.startsWith("/_next") ||
     pathname.startsWith("/public") ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/);
