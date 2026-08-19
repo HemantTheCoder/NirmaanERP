@@ -478,6 +478,32 @@ export interface Database {
           closed_at?: string | null;
         };
       };
+      dpr_checklist_items: {
+        Row: {
+          id: string;
+          dpr_id: string;
+          description: string;
+          is_completed: boolean;
+          sequence: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          dpr_id: string;
+          description: string;
+          is_completed?: boolean;
+          sequence?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          dpr_id?: string;
+          description?: string;
+          is_completed?: boolean;
+          sequence?: number;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
