@@ -17,6 +17,8 @@ export interface DprChecklistItem {
   description: string;
   is_completed: boolean;
   sequence: number;
+  /** Source task for an auto-fetched item; null for a manually-typed ad-hoc item. */
+  task_id: string | null;
   created_at: string;
 }
 
@@ -121,11 +123,15 @@ export async function getTodayDpr(
  * The edit UI works on a local array (add/remove rows freely), so reconciling
  * individual inserts/updates/deletes client-side would be error-prone. Deleting
  * and re-inserting keeps the stored set exactly matching what the user sees.
+ *
+ * task_id must round-trip through this delete+reinsert or every save (even
+ * just ticking a box) would silently strip the auto-fetch link — the caller
+ * is expected to pass back whatever task_id each item already had.
  */
 export async function saveDprChecklist(
   supabase: SupabaseClient<Database>,
   dprId: string,
-  items: { description: string; is_completed: boolean }[]
+  items: { description: string; is_completed: boolean; task_id?: string | null }[]
 ): Promise<{ success: boolean; error?: string }> {
   const { error: deleteError } = await supabase
     .from("dpr_checklist_items")
@@ -142,6 +148,7 @@ export async function saveDprChecklist(
       dpr_id: dprId,
       description: i.description.trim(),
       is_completed: i.is_completed,
+      task_id: i.task_id ?? null,
       sequence: index,
     }));
 
