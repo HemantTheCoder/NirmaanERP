@@ -1,12 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Mail, Phone, Shield, Pencil } from "lucide-react";
+import { Mail, Phone, Shield, Pencil, MessageSquare } from "lucide-react";
 import type { UserContactProfile } from "@/lib/queries/profile";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { ChatPanel } from "./ChatPanel";
 
 interface ContactCardProps {
   profile: UserContactProfile;
   isOwnProfile: boolean;
+  currentUserId: string;
 }
 
 const ROLE_BADGES: Record<UserRole, { label: string; bg: string; text: string }> = {
@@ -27,8 +32,9 @@ function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
-export function ContactCard({ profile, isOwnProfile }: ContactCardProps) {
+export function ContactCard({ profile, isOwnProfile, currentUserId }: ContactCardProps) {
   const roleCfg = ROLE_BADGES[profile.role] || ROLE_BADGES.site_staff;
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
@@ -73,7 +79,7 @@ export function ContactCard({ profile, isOwnProfile }: ContactCardProps) {
           </div>
         </div>
 
-        {isOwnProfile && (
+        {isOwnProfile ? (
           <>
             <Link
               href="/workspace"
@@ -86,8 +92,25 @@ export function ContactCard({ profile, isOwnProfile }: ContactCardProps) {
               Open the Profile tab in My Workspace to edit
             </p>
           </>
+        ) : (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="mt-6 flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-sm"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Message
+          </button>
         )}
       </div>
+
+      {!isOwnProfile && (
+        <ChatPanel
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          currentUserId={currentUserId}
+          otherUser={{ id: profile.id, full_name: profile.full_name }}
+        />
+      )}
     </div>
   );
 }

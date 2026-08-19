@@ -35,5 +35,5 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound();
   }
 
-  return <ContactCard profile={profile} isOwnProfile={user.id === userId} />;
+  return <ContactCard profile={profile} isOwnProfile={user.id === userId} currentUserId={user.id} />;
 }
