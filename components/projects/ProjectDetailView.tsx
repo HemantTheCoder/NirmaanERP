@@ -310,7 +310,20 @@ export function ProjectDetailView({
                         <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        <span>Assignee: {task.assignee_name || "Unassigned"}</span>
+                        <span>
+                          Assignee:{" "}
+                          {task.assignee_id && task.assignee_name ? (
+                            <Link
+                              href={`/profile/${task.assignee_id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-primary hover:underline"
+                            >
+                              {task.assignee_name}
+                            </Link>
+                          ) : (
+                            "Unassigned"
+                          )}
+                        </span>
                         {task.start_date && <span>Start: {task.start_date}</span>}
                         {task.due_date && <span>Due: {task.due_date}</span>}
                       </div>
