@@ -509,6 +509,32 @@ export interface Database {
           created_at?: string;
         };
       };
+      messages: {
+        Row: {
+          id: string;
+          sender_id: string;
+          recipient_id: string;
+          body: string;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sender_id: string;
+          recipient_id: string;
+          body: string;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          sender_id?: string;
+          recipient_id?: string;
+          body?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+      };
       project_delays: {
         Row: {
           id: string;
