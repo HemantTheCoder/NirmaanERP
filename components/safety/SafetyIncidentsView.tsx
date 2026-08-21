@@ -14,6 +14,8 @@ import {
   Building2,
   UserCheck,
   Zap,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { ReportSafetyModal } from "./ReportSafetyModal";
 import { ResolveSafetyModal } from "./ResolveSafetyModal";
@@ -28,6 +30,24 @@ interface SafetyIncidentsViewProps {
   projects: { id: string; name: string }[];
   managers: { id: string; full_name: string | null; email: string }[];
 }
+
+interface SafetyPatternItem {
+  theme: string;
+  severity: "low" | "medium" | "high";
+  evidenceCount: number;
+  exampleIncidents: string[];
+}
+
+interface SafetyPatternsResult {
+  narrative: string;
+  patterns: SafetyPatternItem[];
+}
+
+const PATTERN_SEVERITY_CLASSNAME: Record<SafetyPatternItem["severity"], string> = {
+  low: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700",
+  medium: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
+  high: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800",
+};
 
 const TYPE_CONFIG: Record<IncidentType, { label: string; bg: string; text: string }> = {
   near_miss: { label: "Near-Miss", bg: "bg-sky-100 dark:bg-sky-950/60", text: "text-sky-800 dark:text-sky-300" },
@@ -66,6 +86,36 @@ export function SafetyIncidentsView({
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [incidentToResolve, setIncidentToResolve] = useState<SafetyIncidentItem | null>(null);
+
+  const [patternProjectId, setPatternProjectId] = useState<string>("all");
+  const [patternsLoading, setPatternsLoading] = useState(false);
+  const [patternsError, setPatternsError] = useState<string | null>(null);
+  const [patternsResult, setPatternsResult] = useState<SafetyPatternsResult | null>(null);
+
+  const handleFindPatterns = async () => {
+    setPatternsLoading(true);
+    setPatternsError(null);
+
+    try {
+      const res = await fetch("/api/ai/safety-patterns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: patternProjectId === "all" ? null : patternProjectId }),
+      });
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setPatternsError(result.error || "Failed to analyze incident patterns.");
+        return;
+      }
+
+      setPatternsResult(result);
+    } catch {
+      setPatternsError("Failed to reach the AI pattern detection service.");
+    } finally {
+      setPatternsLoading(false);
+    }
+  };
 
   // Filter logic
   const filteredIncidents = incidents.filter((item) => {
@@ -106,6 +156,88 @@ export function SafetyIncidentsView({
           Report Safety Issue
         </button>
       </div>
+
+      {/* AI Safety Pattern Insights — manager only */}
+      {isManager && (
+        <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                Safety Pattern Insights
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                AI review of recent incidents for recurring hazards — by location, day, or type.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <select
+                value={patternProjectId}
+                onChange={(e) => setPatternProjectId(e.target.value)}
+                disabled={patternsLoading}
+                className="px-2.5 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
+              >
+                <option value="all">All Projects</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleFindPatterns}
+                disabled={patternsLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white transition-all"
+              >
+                {patternsLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {patternsLoading ? "Analyzing…" : "Find Patterns"}
+              </button>
+            </div>
+          </div>
+
+          {patternsError && <p className="text-xs text-rose-500">{patternsError}</p>}
+
+          {patternsResult && (
+            <div className="pt-2 border-t border-indigo-200 dark:border-indigo-900 space-y-3">
+              <p className="text-xs text-foreground/90 leading-relaxed">{patternsResult.narrative}</p>
+              {patternsResult.patterns.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {patternsResult.patterns.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-lg bg-card border border-border space-y-1.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-foreground">{p.theme}</p>
+                        <span
+                          className={cn(
+                            "px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0",
+                            PATTERN_SEVERITY_CLASSNAME[p.severity]
+                          )}
+                        >
+                          {p.severity}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {p.evidenceCount} related report{p.evidenceCount === 1 ? "" : "s"}
+                      </p>
+                      <ul className="text-[11px] text-muted-foreground list-disc list-inside space-y-0.5">
+                        {p.exampleIncidents.slice(0, 3).map((ex, i) => (
+                          <li key={i} className="truncate">{ex}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filter & Sub-Tab Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-card border border-border shadow-sm">
