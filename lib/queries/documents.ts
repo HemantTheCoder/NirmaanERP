@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, DocumentCategory } from "@/types/database";
+import type { Database, DocumentCategory, DocumentDiffStatus } from "@/types/database";
 
 export interface ProjectDocumentItem {
   id: string;
@@ -11,10 +11,18 @@ export interface ProjectDocumentItem {
   category: DocumentCategory;
   uploaded_by: string;
   created_at: string;
+  /** The document this one replaces, if it's a new version of an existing upload. */
+  supersedes_document_id: string | null;
+  diff_summary: string | null;
+  diff_status: DocumentDiffStatus | null;
   uploader?: {
     full_name: string | null;
     email: string;
   };
+  /** Filename of the document this one supersedes, for a "Replaces X" badge without a second query. */
+  supersedes?: {
+    file_name: string;
+  } | null;
 }
 
 export interface UploadDocumentRecordPayload {
@@ -25,6 +33,7 @@ export interface UploadDocumentRecordPayload {
   file_size: number;
   category: DocumentCategory;
   uploaded_by: string;
+  supersedes_document_id?: string | null;
 }
 
 /**
@@ -37,7 +46,8 @@ export async function getProjectDocuments(
   const { data, error } = await (supabase.from("project_documents") as any)
     .select(`
       *,
-      uploader:users!project_documents_uploaded_by_fkey(full_name, email)
+      uploader:users!project_documents_uploaded_by_fkey(full_name, email),
+      supersedes:project_documents!project_documents_supersedes_document_id_fkey(file_name)
     `)
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
@@ -66,10 +76,12 @@ export async function uploadDocumentRecord(
       file_size: payload.file_size,
       category: payload.category,
       uploaded_by: payload.uploaded_by,
+      supersedes_document_id: payload.supersedes_document_id ?? null,
     })
     .select(`
       *,
-      uploader:users!project_documents_uploaded_by_fkey(full_name, email)
+      uploader:users!project_documents_uploaded_by_fkey(full_name, email),
+      supersedes:project_documents!project_documents_supersedes_document_id_fkey(file_name)
     `)
     .single();
 

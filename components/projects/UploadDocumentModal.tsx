@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { UploadCloud, Loader2, X, AlertTriangle, FileText } from "lucide-react";
+import { UploadCloud, Loader2, X, AlertTriangle, FileText, Link2, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadDocumentRecord, type ProjectDocumentItem } from "@/lib/queries/documents";
 import type { DocumentCategory } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
   projectId: string;
   userId: string;
+  existingDocuments: ProjectDocumentItem[];
   onClose: () => void;
-  onSuccess: (newDocument: ProjectDocumentItem) => void;
+  onSuccess: (newDocument: ProjectDocumentItem, diffTrigger?: { file: File; supersedesId: string }) => void;
 }
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB Guard
@@ -27,6 +29,8 @@ const ALLOWED_EXTENSIONS = [
   "txt",
 ];
 
+const DIFF_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"];
+
 const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
   { value: "drawing",  label: "Architectural & Structural Drawing" },
   { value: "contract", label: "Legal Contract & Agreement" },
@@ -39,6 +43,7 @@ export function UploadDocumentModal({
   isOpen,
   projectId,
   userId,
+  existingDocuments,
   onClose,
   onSuccess,
 }: UploadDocumentModalProps) {
@@ -49,7 +54,16 @@ export function UploadDocumentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [replacesEnabled, setReplacesEnabled] = useState(false);
+  const [supersedesId, setSupersedesId] = useState<string | null>(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [filterText, setFilterText] = useState("");
+
   if (!isOpen) return null;
+
+  const candidateDocs = existingDocuments
+    .filter((d) => showAllCategories || d.category === category)
+    .filter((d) => d.file_name.toLowerCase().includes(filterText.toLowerCase()));
 
   const handleFileChange = (file: File | null) => {
     setErrorMsg(null);
@@ -114,6 +128,7 @@ export function UploadDocumentModal({
         file_size: selectedFile.size,
         category,
         uploaded_by: userId,
+        supersedes_document_id: replacesEnabled ? supersedesId : null,
       });
 
       setIsSubmitting(false);
@@ -121,7 +136,15 @@ export function UploadDocumentModal({
       if (!res.success || !res.document) {
         setErrorMsg(res.error || "Failed to record document metadata.");
       } else {
-        onSuccess(res.document);
+        // Upload success is reported independently of AI diffing — the
+        // modal closes now; diffing (if eligible) runs in the background,
+        // owned by the parent view.
+        const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "";
+        const diffTrigger =
+          replacesEnabled && supersedesId && DIFF_EXTENSIONS.includes(ext)
+            ? { file: selectedFile, supersedesId }
+            : undefined;
+        onSuccess(res.document, diffTrigger);
         resetForm();
       }
     } catch (err: any) {
@@ -134,6 +157,10 @@ export function UploadDocumentModal({
     setSelectedFile(null);
     setCategory("drawing");
     setErrorMsg(null);
+    setReplacesEnabled(false);
+    setSupersedesId(null);
+    setShowAllCategories(false);
+    setFilterText("");
     onClose();
   };
 
@@ -206,6 +233,71 @@ export function UploadDocumentModal({
                 <span className="text-[11px] text-emerald-600 shrink-0 ml-2">
                   {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                 </span>
+              </div>
+            )}
+          </div>
+
+          {/* Optional: link this upload as a new version of an existing document */}
+          <div className="border-t border-border pt-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={replacesEnabled}
+                onChange={(e) => {
+                  setReplacesEnabled(e.target.checked);
+                  if (!e.target.checked) setSupersedesId(null);
+                }}
+                className="rounded border-border"
+              />
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              This replaces an existing document
+            </label>
+
+            {replacesEnabled && (
+              <div className="mt-2 space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    placeholder="Search existing documents…"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showAllCategories}
+                    onChange={(e) => setShowAllCategories(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Show all categories (default: only &quot;{CATEGORY_OPTIONS.find((c) => c.value === category)?.label}&quot;)
+                </label>
+
+                <div className="max-h-32 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                  {candidateDocs.length === 0 ? (
+                    <p className="p-2 text-[11px] text-muted-foreground">No matching documents found.</p>
+                  ) : (
+                    candidateDocs.map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setSupersedesId(doc.id)}
+                        className={cn(
+                          "w-full flex items-center gap-1.5 px-2.5 py-1.5 text-left text-[11px] transition-colors",
+                          supersedesId === doc.id
+                            ? "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 font-semibold"
+                            : "text-foreground hover:bg-secondary/50"
+                        )}
+                      >
+                        <FileText className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{doc.file_name}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
