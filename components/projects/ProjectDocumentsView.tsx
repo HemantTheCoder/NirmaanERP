@@ -16,6 +16,10 @@ import {
   X,
   ExternalLink,
   FolderOpen,
+  Link2,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -85,6 +89,7 @@ export function ProjectDocumentsView({
   const [docToDelete, setDocToDelete] = useState<ProjectDocumentItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [expandedDiffId, setExpandedDiffId] = useState<string | null>(null);
 
   const filteredDocuments = documents.filter(
     (d) => categoryFilter === "all" || d.category === categoryFilter
@@ -123,8 +128,45 @@ export function ProjectDocumentsView({
     }
   };
 
-  const handleUploadSuccess = (newDoc: ProjectDocumentItem) => {
-    setDocuments((prev) => [newDoc, ...prev]);
+  const handleUploadSuccess = (
+    newDoc: ProjectDocumentItem,
+    diffTrigger?: { file: File; supersedesId: string }
+  ) => {
+    setDocuments((prev) => [
+      diffTrigger ? { ...newDoc, diff_status: "pending" } : newDoc,
+      ...prev,
+    ]);
+
+    if (diffTrigger) {
+      triggerDocumentDiff(newDoc.id, diffTrigger.supersedesId, diffTrigger.file);
+    }
+  };
+
+  const triggerDocumentDiff = async (documentId: string, supersedesId: string, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("documentId", documentId);
+      formData.append("supersedesDocumentId", supersedesId);
+
+      const res = await fetch("/api/ai/document-diff", { method: "POST", body: formData });
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok || result.skipped) {
+        setDocuments((prev) =>
+          prev.map((d) => (d.id === documentId ? { ...d, diff_status: result.skipped ? null : "failed" } : d))
+        );
+        return;
+      }
+
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === documentId ? { ...d, diff_status: "complete", diff_summary: result.summary } : d
+        )
+      );
+    } catch {
+      setDocuments((prev) => prev.map((d) => (d.id === documentId ? { ...d, diff_status: "failed" } : d)));
+    }
   };
 
   return (
@@ -218,6 +260,41 @@ export function ProjectDocumentsView({
                             <p className="text-[10px] text-muted-foreground uppercase mt-0.5">
                               {doc.file_name.split(".").pop()}
                             </p>
+                            {doc.supersedes?.file_name && (
+                              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1 truncate">
+                                <Link2 className="w-2.5 h-2.5 shrink-0" />
+                                Replaces &quot;{doc.supersedes.file_name}&quot;
+                              </p>
+                            )}
+                            {doc.diff_status === "pending" && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                Comparing…
+                              </p>
+                            )}
+                            {doc.diff_status === "complete" && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedDiffId(expandedDiffId === doc.id ? null : doc.id)}
+                                className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300"
+                              >
+                                <Sparkles className="w-2.5 h-2.5" />
+                                What changed
+                                {expandedDiffId === doc.id ? (
+                                  <ChevronUp className="w-2.5 h-2.5" />
+                                ) : (
+                                  <ChevronDown className="w-2.5 h-2.5" />
+                                )}
+                              </button>
+                            )}
+                            {doc.diff_status === "failed" && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Comparison failed</p>
+                            )}
+                            {doc.diff_status === "complete" && expandedDiffId === doc.id && (
+                              <p className="text-[11px] text-foreground/80 leading-relaxed mt-1.5 p-2 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 whitespace-normal max-w-xs">
+                                {doc.diff_summary}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -298,6 +375,7 @@ export function ProjectDocumentsView({
         isOpen={showUploadModal}
         projectId={projectId}
         userId={userId}
+        existingDocuments={documents}
         onClose={() => setShowUploadModal(false)}
         onSuccess={handleUploadSuccess}
       />
