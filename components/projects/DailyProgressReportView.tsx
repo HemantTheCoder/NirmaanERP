@@ -27,6 +27,7 @@ import {
   Link2,
   CheckSquare,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import {
   submitDpr,
@@ -41,6 +42,7 @@ import { updateTaskStatus } from "@/lib/queries/tasks";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { VoiceDprRecorder, type VoiceDprResult } from "@/components/projects/VoiceDprRecorder";
 
 interface DailyProgressReportViewProps {
   projectId: string;
@@ -199,6 +201,13 @@ export function DailyProgressReportView({
   const [photosCount, setPhotosCount] = useState<string>(initialTodayReport ? String(initialTodayReport.photos_count) : "4");
   const [aiDrafting, setAiDrafting] = useState(false);
   const [aiDraftError, setAiDraftError] = useState<string | null>(null);
+  const [voiceTranscriptOriginal, setVoiceTranscriptOriginal] = useState<string | null>(
+    initialTodayReport?.voice_transcript_original ?? null
+  );
+  const [voiceTranscriptLanguage, setVoiceTranscriptLanguage] = useState<string | null>(
+    initialTodayReport?.voice_transcript_language ?? null
+  );
+  const [todayTranscriptExpanded, setTodayTranscriptExpanded] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistDraft[]>(
     (initialTodayReport?.checklist_items || []).map((i) => ({
       description: i.description,
@@ -295,6 +304,21 @@ export function DailyProgressReportView({
     }
   };
 
+  const handleVoiceResult = (result: VoiceDprResult) => {
+    setWorkCompleted(result.workCompleted);
+    // Appends rather than replaces — preserves anything already typed or
+    // auto-fetched from tasks, same as the manual "add item" button.
+    setChecklist((prev) => [
+      ...prev,
+      ...result.checklistItems
+        .filter((i) => i.description.trim())
+        .map((i) => ({ description: i.description, is_completed: i.is_completed, task_id: null })),
+    ]);
+    if (result.delaysEncountered) setDelaysEncountered(result.delaysEncountered);
+    setVoiceTranscriptOriginal(result.transcriptOriginal || null);
+    setVoiceTranscriptLanguage(result.detectedLanguage || null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const numManpower = Number(manpowerCount);
@@ -325,6 +349,8 @@ export function DailyProgressReportView({
         work_completed: workCompleted.trim(),
         delays_encountered: delaysEncountered.trim() || null,
         photos_count: Number(photosCount) || 0,
+        voice_transcript_original: voiceTranscriptOriginal,
+        voice_transcript_language: voiceTranscriptLanguage,
         existingId: todayReport?.id,
       },
       user.id
@@ -490,6 +516,27 @@ export function DailyProgressReportView({
             </p>
           </div>
 
+          {todayReport.voice_transcript_original && (
+            <div className="rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setTodayTranscriptExpanded((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Mic className="w-3.5 h-3.5" />
+                  Original voice transcript{todayReport.voice_transcript_language ? ` (${todayReport.voice_transcript_language})` : ""}
+                </span>
+                {todayTranscriptExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {todayTranscriptExpanded && (
+                <p className="px-4 pb-3 text-xs text-indigo-800 dark:text-indigo-300/90 leading-relaxed whitespace-pre-wrap">
+                  {todayReport.voice_transcript_original}
+                </p>
+              )}
+            </div>
+          )}
+
           <ChecklistSummary
             items={todayReport.checklist_items || []}
             markedDoneTaskIds={markedDoneTaskIds}
@@ -586,6 +633,8 @@ export function DailyProgressReportView({
                 className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+
+            <VoiceDprRecorder projectId={projectId} onResult={handleVoiceResult} />
 
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -801,6 +850,18 @@ export function DailyProgressReportView({
                           {report.equipment_used}
                         </p>
                       </div>
+
+                      {report.voice_transcript_original && (
+                        <div className="p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 space-y-1">
+                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                            <Mic className="w-3.5 h-3.5" />
+                            Original voice transcript{report.voice_transcript_language ? ` (${report.voice_transcript_language})` : ""}:
+                          </p>
+                          <p className="text-xs text-indigo-800 dark:text-indigo-300/90 whitespace-pre-wrap">
+                            {report.voice_transcript_original}
+                          </p>
+                        </div>
+                      )}
 
                       <ChecklistSummary
                         items={report.checklist_items || []}
