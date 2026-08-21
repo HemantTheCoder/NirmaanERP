@@ -34,6 +34,9 @@ export interface DailyProgressReport {
   delays_encountered: string | null;
   photos_count: number;
   created_at: string;
+  /** Original-language transcript, present only for a voice-drafted report. */
+  voice_transcript_original: string | null;
+  voice_transcript_language: string | null;
   submitter?: {
     full_name: string;
     email: string;
@@ -194,6 +197,8 @@ export async function submitDpr(
     work_completed: string;
     delays_encountered?: string | null;
     photos_count?: number;
+    voice_transcript_original?: string | null;
+    voice_transcript_language?: string | null;
     existingId?: string;
   },
   userId: string
@@ -210,6 +215,8 @@ export async function submitDpr(
         work_completed: input.work_completed.trim(),
         delays_encountered: input.delays_encountered ? input.delays_encountered.trim() : null,
         photos_count: input.photos_count || 0,
+        voice_transcript_original: input.voice_transcript_original ?? null,
+        voice_transcript_language: input.voice_transcript_language ?? null,
       })
       .eq("id", input.existingId)
       .select(`
@@ -237,6 +244,8 @@ export async function submitDpr(
       work_completed: input.work_completed.trim(),
       delays_encountered: input.delays_encountered ? input.delays_encountered.trim() : null,
       photos_count: input.photos_count || 0,
+      voice_transcript_original: input.voice_transcript_original ?? null,
+      voice_transcript_language: input.voice_transcript_language ?? null,
     })
     .select(`
       *,
