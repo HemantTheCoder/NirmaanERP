@@ -34,7 +34,7 @@ export function SignupForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!turnstileToken) {
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -47,7 +47,7 @@ export function SignupForm() {
       password,
       options: {
         data: { full_name: fullName, role },
-        captchaToken: turnstileToken,
+        captchaToken: turnstileToken ?? undefined,
       },
     });
 
