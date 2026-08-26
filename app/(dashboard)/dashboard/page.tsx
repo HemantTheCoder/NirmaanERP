@@ -180,7 +180,15 @@ export default async function DashboardPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Good morning 👋</h2>
+          <h2 className="text-2xl font-bold text-foreground">
+            {(() => {
+              const hour = new Date().getHours();
+              const period =
+                hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+              const firstName = profile?.full_name?.split(" ")[0] ?? null;
+              return `Good ${period}${firstName ? `, ${firstName}` : ""} 👋`;
+            })()}
+          </h2>
           <p className="text-muted-foreground text-sm mt-0.5">
             Here&apos;s what&apos;s happening across your projects today.
           </p>
