@@ -182,7 +182,14 @@ export default async function DashboardPage() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">
             {(() => {
-              const hour = new Date().getHours();
+              const hour =
+                Number(
+                  new Intl.DateTimeFormat("en-US", {
+                    hour: "numeric",
+                    hour12: false,
+                    timeZone: "Asia/Kolkata",
+                  }).format(new Date())
+                ) % 24;
               const period =
                 hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
               const firstName = profile?.full_name?.split(" ")[0] ?? null;
