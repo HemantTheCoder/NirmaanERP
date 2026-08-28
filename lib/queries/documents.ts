@@ -47,7 +47,7 @@ export async function getProjectDocuments(
     .select(`
       *,
       uploader:users!project_documents_uploaded_by_fkey(full_name, email),
-      supersedes:project_documents!project_documents_supersedes_document_id_fkey(file_name)
+      supersedes:supersedes_document_id(file_name)
     `)
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
@@ -81,7 +81,7 @@ export async function uploadDocumentRecord(
     .select(`
       *,
       uploader:users!project_documents_uploaded_by_fkey(full_name, email),
-      supersedes:project_documents!project_documents_supersedes_document_id_fkey(file_name)
+      supersedes:supersedes_document_id(file_name)
     `)
     .single();
 
