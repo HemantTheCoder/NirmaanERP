@@ -114,6 +114,11 @@ export function PunchListView({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // AI Photo QA — analyzes the uploaded photo before submission, suggests fields
+  const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
+  const [photoQaError, setPhotoQaError] = useState<string | null>(null);
+  const [photoQaFindings, setPhotoQaFindings] = useState<string[] | null>(null);
+
   // Active photo URL passed to PunchItemAnnotator canvas
   const activePhotoUrl = photoSourceMode === "upload" && uploadedFilePreview ? uploadedFilePreview : samplePhotoUrl;
 
@@ -141,6 +146,42 @@ export function PunchListView({
     const objectUrl = URL.createObjectURL(file);
     setUploadedFilePreview(objectUrl);
     setPhotoSourceMode("upload");
+    setPhotoQaFindings(null);
+    setPhotoQaError(null);
+  };
+
+  const handleAnalyzePhoto = async () => {
+    if (!uploadedFile) return;
+    setIsAnalyzingPhoto(true);
+    setPhotoQaError(null);
+    setPhotoQaFindings(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("photo", uploadedFile);
+      const res = await fetch("/api/ai/photo-qa", { method: "POST", body: formData });
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setPhotoQaError(result.error || "Failed to analyze photo.");
+        return;
+      }
+
+      if (!result.detected) {
+        setPhotoQaFindings([]);
+        return;
+      }
+
+      // Drafts, never auto-saves — same pattern as the DPR "AI Draft" button
+      if (result.suggestedTitle) setTitle(result.suggestedTitle);
+      if (result.suggestedDescription) setDescription(result.suggestedDescription);
+      if (result.suggestedSeverity) setSeverity(result.suggestedSeverity);
+      setPhotoQaFindings(result.findings || []);
+    } catch {
+      setPhotoQaError("Failed to reach the AI analysis service.");
+    } finally {
+      setIsAnalyzingPhoto(false);
+    }
   };
 
   // Compute metrics
@@ -178,6 +219,8 @@ export function PunchListView({
       { type: "arrow", x: 0.2, y: 0.25, endX: 0.42, endY: 0.38 },
     ]);
     setErrorMsg(null);
+    setPhotoQaFindings(null);
+    setPhotoQaError(null);
     setIsAddModalOpen(true);
   };
 
@@ -529,6 +572,36 @@ export function PunchListView({
                         </p>
                       </div>
                     </div>
+
+                    {uploadedFile && (
+                      <button
+                        type="button"
+                        onClick={handleAnalyzePhoto}
+                        disabled={isAnalyzingPhoto}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        title="Analyze the photo for defects and prefill the fields below — review before saving"
+                      >
+                        {isAnalyzingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        {isAnalyzingPhoto ? "Analyzing…" : "Analyze Photo with AI"}
+                      </button>
+                    )}
+
+                    {photoQaError && <p className="text-[11px] text-rose-500">{photoQaError}</p>}
+
+                    {photoQaFindings && (
+                      photoQaFindings.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground italic">No obvious defects detected — fields not changed.</p>
+                      ) : (
+                        <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 space-y-1">
+                          <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">AI findings (fields prefilled below — review before saving):</p>
+                          <ul className="text-[11px] text-indigo-800 dark:text-indigo-300/90 list-disc pl-4 space-y-0.5">
+                            {photoQaFindings.map((f, i) => (
+                              <li key={i}>{f}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    )}
                   </div>
                 ) : (
                   /* Secondary Sample Selector */

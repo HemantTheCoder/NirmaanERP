@@ -17,6 +17,7 @@ import {
   AlertOctagon,
   FileCheck2,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
@@ -34,6 +35,7 @@ import type { PunchItem } from "@/lib/queries/punch_list";
 import type { DailyProgressReport } from "@/lib/queries/dpr";
 import type { ProjectDelay } from "@/lib/queries/delays";
 import { DelayStatusPanel } from "@/components/projects/DelayStatusPanel";
+import { ProjectChatPanel } from "@/components/projects/ProjectChatPanel";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 import type { TaskDependencyLink } from "@/lib/queries/taskDependencies";
@@ -89,7 +91,7 @@ export function ProjectDetailView({
 
   const [tasks, setTasks] = useState<any[]>(initialTasks);
   const [dependencies, setDependencies] = useState<TaskDependencyLink[]>(initialDependencies);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr" | "ai_chat">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -324,6 +326,19 @@ export function ProjectDetailView({
               <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
               Daily Report ({initialDprHistory.length})
             </button>
+
+            <button
+              onClick={() => setActiveTab("ai_chat")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "ai_chat"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              Ask AI
+            </button>
           </div>
         </div>
 
@@ -467,6 +482,11 @@ export function ProjectDetailView({
             initialTodayReport={initialTodayDpr}
             user={{ id: userId, role: userRole }}
           />
+        )}
+
+        {/* Tab 8: Ask AI */}
+        {activeTab === "ai_chat" && (
+          <ProjectChatPanel projectId={project.id} projectName={project.name} />
         )}
       </div>
 

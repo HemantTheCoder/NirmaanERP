@@ -39,6 +39,9 @@ import {
   Percent,
   Scale,
   FileCheck2,
+  Sparkles,
+  ThumbsUp,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +67,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   landscaping: "Landscaping",
   other: "General Subcontract",
 };
+
+interface RankedBid {
+  bidId: string;
+  rank: number;
+  pricePositioning: string;
+  strengths: string[];
+  risks: string[];
+}
+interface BidComparisonResult {
+  recommendation: string;
+  rankedBids: RankedBid[];
+}
 
 const BID_STATUS_BADGES: Record<BidStatus, { label: string; bg: string; text: string }> = {
   submitted: { label: "Submitted", bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-800 dark:text-indigo-300" },
@@ -108,6 +123,34 @@ export function TenderDetailView({
 
   // Sorting for Admin Bids Table
   const [bidSort, setBidSort] = useState<"asc" | "desc">("asc");
+
+  // AI Bid Comparison
+  const [bidComparison, setBidComparison] = useState<BidComparisonResult | null>(null);
+  const [isComparingBids, setIsComparingBids] = useState(false);
+  const [bidComparisonError, setBidComparisonError] = useState<string | null>(null);
+
+  const handleCompareBids = async () => {
+    setIsComparingBids(true);
+    setBidComparisonError(null);
+    setBidComparison(null);
+    try {
+      const res = await fetch("/api/ai/bid-comparison", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenderId: tender.id }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBidComparisonError(result.error || "Failed to compare bids.");
+        return;
+      }
+      setBidComparison(result as BidComparisonResult);
+    } catch {
+      setBidComparisonError("Failed to reach the AI comparison service.");
+    } finally {
+      setIsComparingBids(false);
+    }
+  };
 
   // Signed URL download helper
   const handleDownloadDoc = async (doc: TenderDocumentItem) => {
@@ -578,13 +621,73 @@ export function TenderDetailView({
             <p className="text-xs text-muted-foreground">
               Review received contractor proposals, EMD references, shortlist candidates, or award the trade package.
             </p>
-            <button
-              onClick={() => setBidSort((prev) => (prev === "asc" ? "desc" : "asc"))}
-              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              Sort Amount: {bidSort === "asc" ? "Lowest to Highest ↑" : "Highest to Lowest ↓"}
-            </button>
+            <div className="flex items-center gap-3">
+              {sortedBids.length >= 2 && (
+                <button
+                  onClick={handleCompareBids}
+                  disabled={isComparingBids}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 disabled:opacity-60"
+                >
+                  {isComparingBids ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {isComparingBids ? "Comparing…" : "Compare Bids with AI"}
+                </button>
+              )}
+              <button
+                onClick={() => setBidSort((prev) => (prev === "asc" ? "desc" : "asc"))}
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Sort Amount: {bidSort === "asc" ? "Lowest to Highest ↑" : "Highest to Lowest ↓"}
+              </button>
+            </div>
           </div>
+
+          {bidComparisonError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs">
+              {bidComparisonError}
+            </div>
+          )}
+
+          {bidComparison && (
+            <div className="bg-card border border-indigo-200 dark:border-indigo-900 rounded-2xl p-5 space-y-4 shadow-sm">
+              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                AI Bid Comparison
+              </p>
+              <p className="text-xs text-foreground leading-relaxed bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5">
+                {bidComparison.recommendation}
+              </p>
+              <div className="space-y-2.5">
+                {[...bidComparison.rankedBids]
+                  .sort((a, b) => a.rank - b.rank)
+                  .map((rb) => {
+                    const bid = bids.find((b) => b.id === rb.bidId);
+                    return (
+                      <div key={rb.bidId} className="p-3.5 rounded-xl border border-border bg-secondary/30 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold text-foreground">
+                            #{rb.rank} — {bid?.contractor?.full_name || "Contractor"}
+                            {bid && <span className="font-normal text-muted-foreground ml-1.5">₹{bid.bid_amount.toLocaleString("en-IN")}</span>}
+                          </p>
+                          <span className="text-[11px] font-medium text-muted-foreground">{rb.pricePositioning}</span>
+                        </div>
+                        {rb.strengths.length > 0 && (
+                          <div className="flex items-start gap-1.5">
+                            <ThumbsUp className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-muted-foreground">{rb.strengths.join(" · ")}</p>
+                          </div>
+                        )}
+                        {rb.risks.length > 0 && (
+                          <div className="flex items-start gap-1.5">
+                            <ShieldAlert className="w-3 h-3 text-rose-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-muted-foreground">{rb.risks.join(" · ")}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
 
           {sortedBids.length === 0 ? (
             <div className="bg-card border border-border rounded-2xl p-12 text-center">

@@ -53,6 +53,45 @@ function formatCoNumber(seq: number): string {
 }
 
 /**
+ * RFIs for a single project — used by the AI project chat and available for
+ * any future per-project RFI view.
+ */
+export async function getProjectRfis(
+  supabase: SupabaseClient<Database>,
+  projectId: string
+): Promise<RfiWithDetails[]> {
+  const { data, error } = await (supabase.from("rfis") as any)
+    .select(`*, projects ( name ), raised_by_user:users!raised_by ( full_name ), assigned_to_user:users!assigned_to ( full_name )`)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching project RFIs:", error);
+    return [];
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    rfi_seq: r.rfi_seq,
+    rfi_number: formatRfiNumber(r.rfi_seq),
+    project_id: r.project_id,
+    project_name: r.projects?.name || null,
+    subject: r.subject,
+    question: r.question,
+    status: r.status as RfiStatus,
+    priority: r.priority as TaskPriority,
+    raised_by: r.raised_by,
+    raised_by_name: r.raised_by_user?.full_name || null,
+    assigned_to: r.assigned_to,
+    assigned_to_name: r.assigned_to_user?.full_name || null,
+    response: r.response,
+    responded_at: r.responded_at,
+    due_date: r.due_date,
+    created_at: r.created_at,
+  }));
+}
+
+/**
  * Fetch all RFIs with project, requester, and assignee details
  */
 export async function getRfis(
