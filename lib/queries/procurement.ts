@@ -182,6 +182,58 @@ export async function getPurchaseOrders(
 }
 
 /**
+ * Purchase orders for one project — used by the Gantt delay-risk score to
+ * flag tasks exposed to a late material delivery, and available for any
+ * future per-project procurement view.
+ */
+export async function getProjectPurchaseOrders(
+  supabase: SupabaseClient<Database>,
+  projectId: string
+): Promise<PurchaseOrderWithDetails[]> {
+  const { data, error } = await (supabase.from("purchase_orders") as any)
+    .select(`
+      *,
+      projects ( name ),
+      vendors ( name ),
+      purchase_order_items ( * )
+    `)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching project purchase orders:", error);
+    return [];
+  }
+
+  return (data || []).map((po: any) => {
+    const items = (po.purchase_order_items || []) as PurchaseOrderItem[];
+    const total_amount = items.reduce(
+      (sum, item) => sum + Number(item.quantity) * Number(item.unit_price),
+      0
+    );
+
+    return {
+      id: po.id,
+      po_seq: po.po_seq,
+      po_number: formatPoNumber(po.po_seq),
+      project_id: po.project_id,
+      project_name: po.projects?.name || null,
+      vendor_id: po.vendor_id,
+      vendor_name: po.vendors?.name || null,
+      status: po.status as PoStatus,
+      expected_delivery_date: po.expected_delivery_date,
+      notes: po.notes,
+      created_by: po.created_by,
+      approved_by: po.approved_by,
+      approved_at: po.approved_at,
+      created_at: po.created_at,
+      items,
+      total_amount,
+    };
+  });
+}
+
+/**
  * Create a purchase order with line items
  */
 export async function createPurchaseOrder(

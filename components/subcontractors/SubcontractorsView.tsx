@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { updateSubcontractStatus } from "@/lib/queries/subcontractors";
 import type { SubcontractWithDetails, SubcontractStatus } from "@/lib/queries/subcontractors";
 import type { Vendor } from "@/lib/queries/procurement";
+import type { TrustScore } from "@/lib/utils/subcontractorTrust";
 import type { UserRole } from "@/types/database";
 import { CreateSubcontractModal } from "./CreateSubcontractModal";
 import { AddReviewModal } from "./AddReviewModal";
@@ -25,9 +26,18 @@ import { PrintExportButton } from "@/components/common/PrintExportButton";
 interface SubcontractorsViewProps {
   subcontracts: SubcontractWithDetails[];
   vendors: Vendor[];
+  vendorTrust: Record<string, TrustScore>;
   projects: { id: string; name: string }[];
   user: { id: string; role: UserRole };
 }
+
+const TRUST_BADGE_STYLE: Record<TrustScore["label"], string> = {
+  Excellent: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300",
+  Good: "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300",
+  Fair: "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300",
+  "Needs Review": "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300",
+  Unrated: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400",
+};
 
 const STATUS_BADGES: Record<SubcontractStatus, { label: string; bg: string; text: string }> = {
   draft: { label: "Draft", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
@@ -41,7 +51,7 @@ const NEXT_STATUS: Partial<Record<SubcontractStatus, SubcontractStatus>> = {
   active: "completed",
 };
 
-export function SubcontractorsView({ subcontracts, vendors, projects, user }: SubcontractorsViewProps) {
+export function SubcontractorsView({ subcontracts, vendors, vendorTrust, projects, user }: SubcontractorsViewProps) {
   const router = useRouter();
   const supabase = createClient();
   const [search, setSearch] = useState("");
@@ -195,7 +205,20 @@ export function SubcontractorsView({ subcontracts, vendors, projects, user }: Su
                   </span>
                 </div>
 
-                <h3 className="text-base font-bold text-foreground mb-1">{sc.vendor_name}</h3>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="text-base font-bold text-foreground">{sc.vendor_name}</h3>
+                  {vendorTrust[sc.vendor_id] && (
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+                        TRUST_BADGE_STYLE[vendorTrust[sc.vendor_id].label]
+                      )}
+                      title={`Vendor trust score: ${vendorTrust[sc.vendor_id].score}/100 across ${vendorTrust[sc.vendor_id].reviewCount} review(s) and ${vendorTrust[sc.vendor_id].terminatedContracts} terminated contract(s)`}
+                    >
+                      {vendorTrust[sc.vendor_id].label} · {vendorTrust[sc.vendor_id].score}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mb-3">{sc.project_name}</p>
                 <p className="text-xs text-foreground line-clamp-2 mb-3">{sc.scope_of_work}</p>
 
@@ -255,6 +278,7 @@ export function SubcontractorsView({ subcontracts, vendors, projects, user }: Su
         userId={user.id}
         projects={projects}
         vendors={subVendors}
+        vendorTrust={vendorTrust}
         onCreated={refresh}
       />
 

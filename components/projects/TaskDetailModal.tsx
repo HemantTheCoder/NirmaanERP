@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { X, Loader2, Calendar, User, Clock, AlertTriangle, CheckCircle2, GitBranch, Plus } from "lucide-react";
+import { X, Loader2, Calendar, User, Clock, AlertTriangle, CheckCircle2, GitBranch, Plus, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { wouldCreateCycle } from "@/lib/utils/criticalPath";
+import type { TaskDelayRisk } from "@/lib/utils/delayRisk";
 import { addTaskDependency, removeTaskDependency, type TaskDependencyLink } from "@/lib/queries/taskDependencies";
 
 interface TaskDetailModalProps {
@@ -16,6 +17,7 @@ interface TaskDetailModalProps {
   /** Every task in the project, for the predecessor picker. */
   allTasks: any[];
   dependencies: TaskDependencyLink[];
+  delayRisk?: TaskDelayRisk;
   userId: string;
   userRole: string;
   onDependenciesChange: (next: TaskDependencyLink[]) => void;
@@ -28,6 +30,7 @@ export function TaskDetailModal({
   onUpdateSuccess,
   allTasks,
   dependencies,
+  delayRisk,
   userId,
   userRole,
   onDependenciesChange,
@@ -187,6 +190,20 @@ export function TaskDetailModal({
             <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {delayRisk && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 text-xs space-y-1">
+              <div className="flex items-center gap-2 font-bold">
+                <Zap className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{delayRisk.level === "high" ? "High" : "Medium"} risk of delay</span>
+              </div>
+              <ul className="pl-6 list-disc space-y-0.5 text-amber-700 dark:text-amber-400/90">
+                {delayRisk.reasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
             </div>
           )}
 

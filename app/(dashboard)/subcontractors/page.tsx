@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getSubcontracts } from "@/lib/queries/subcontractors";
+import { getSubcontracts, getVendorTrustScores } from "@/lib/queries/subcontractors";
 import { getVendors } from "@/lib/queries/procurement";
 import { SubcontractorsView } from "@/components/subcontractors/SubcontractorsView";
 import type { UserRole } from "@/types/database";
@@ -31,9 +31,10 @@ export default async function SubcontractorsPage() {
 
   const role = (profileData?.role ?? "site_staff") as UserRole;
 
-  const [subcontracts, vendors, { data: projectsData }] = await Promise.all([
+  const [subcontracts, vendors, vendorTrust, { data: projectsData }] = await Promise.all([
     getSubcontracts(supabase),
     getVendors(supabase),
+    getVendorTrustScores(supabase),
     (supabase.from("projects") as any).select("id, name").order("name"),
   ]);
 
@@ -43,6 +44,7 @@ export default async function SubcontractorsPage() {
     <SubcontractorsView
       subcontracts={subcontracts}
       vendors={vendors}
+      vendorTrust={vendorTrust}
       projects={projects}
       user={{ id: user.id, role }}
     />

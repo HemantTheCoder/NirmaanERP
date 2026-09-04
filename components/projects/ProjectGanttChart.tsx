@@ -15,8 +15,10 @@ import {
   FileImage,
   Printer,
   ChevronDown,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TaskDelayRisk } from "@/lib/utils/delayRisk";
 
 interface GanttTask {
   id: string;
@@ -43,6 +45,8 @@ interface ProjectGanttChartProps {
   /** From lib/utils/criticalPath.ts — tasks/links on the longest chain through the dependency graph. */
   criticalTaskIds?: Set<string>;
   criticalLinkKeys?: Set<string>;
+  /** From lib/utils/delayRisk.ts — tasks trending toward a delay before they're actually overdue. */
+  delayRiskByTaskId?: Map<string, TaskDelayRisk>;
   onTaskClick?: (task: GanttTask) => void;
 }
 
@@ -62,6 +66,7 @@ export function ProjectGanttChart({
   dependencies = [],
   criticalTaskIds,
   criticalLinkKeys,
+  delayRiskByTaskId,
   onTaskClick,
 }: ProjectGanttChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -503,6 +508,12 @@ export function ProjectGanttChart({
               Critical Path ({criticalTaskIds.size} task{criticalTaskIds.size === 1 ? "" : "s"})
             </span>
           )}
+          {delayRiskByTaskId && delayRiskByTaskId.size > 0 && (
+            <span className="flex items-center gap-1" title="Trending toward a delay based on schedule proximity, blocked predecessors, and this project's own delay/procurement history">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              At Risk ({delayRiskByTaskId.size} task{delayRiskByTaskId.size === 1 ? "" : "s"})
+            </span>
+          )}
         </div>
       </div>
 
@@ -637,6 +648,7 @@ export function ProjectGanttChart({
 
                 const isDone = task.status === "done";
                 const isCriticalTask = criticalTaskIds?.has(task.id);
+                const risk = delayRiskByTaskId?.get(task.id);
                 const colors = STATUS_COLORS[task.status] || STATUS_COLORS.todo;
 
                 const assigneeInitials = (task.assignee_name || "Unassigned")
@@ -718,6 +730,19 @@ export function ProjectGanttChart({
                           </div>
                         </div>
 
+                        {/* Delay Risk Badge */}
+                        {risk && (
+                          <span
+                            className={cn(
+                              "absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 rounded-full shadow-xs",
+                              risk.level === "high" ? "bg-amber-500" : "bg-amber-400"
+                            )}
+                            title={`At risk of delay: ${risk.reasons.join("; ")}`}
+                          >
+                            <Zap className="w-2.5 h-2.5 text-white" />
+                          </span>
+                        )}
+
                         {/* Hover Tooltip Popup */}
                         {hoveredTask?.id === task.id && (
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 p-3 rounded-xl bg-slate-900 text-white shadow-2xl border border-slate-700 text-xs pointer-events-none space-y-1.5">
@@ -747,6 +772,16 @@ export function ProjectGanttChart({
                                 <p className="text-rose-400 font-bold text-[11px] pt-1">
                                   ⚠️ Overdue Task
                                 </p>
+                              )}
+                              {risk && (
+                                <div className="pt-1 space-y-0.5">
+                                  <p className="text-amber-400 font-bold text-[11px]">
+                                    ⚡ {risk.level === "high" ? "High" : "Medium"} Delay Risk
+                                  </p>
+                                  {risk.reasons.map((r, i) => (
+                                    <p key={i} className="text-slate-400 text-[10px] leading-snug">• {r}</p>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </div>

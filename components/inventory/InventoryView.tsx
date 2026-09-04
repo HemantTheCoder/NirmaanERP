@@ -11,6 +11,7 @@ import {
   Wrench,
   Truck,
   ArrowUpDown,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +21,9 @@ import type {
   EquipmentAsset,
   EquipmentStatus,
 } from "@/lib/queries/inventory";
+import type { ReorderSuggestion } from "@/lib/utils/reorderSuggestions";
+import type { UtilizationResult } from "@/lib/utils/equipmentUtilization";
+import { hasEnoughSignal } from "@/lib/utils/equipmentUtilization";
 import type { UserRole } from "@/types/database";
 import { CreateInventoryItemModal } from "./CreateInventoryItemModal";
 import { RecordTransactionModal } from "./RecordTransactionModal";
@@ -29,6 +33,8 @@ import { PrintExportButton } from "@/components/common/PrintExportButton";
 interface InventoryViewProps {
   items: InventoryItem[];
   equipment: EquipmentAsset[];
+  reorderSuggestions: Record<string, ReorderSuggestion>;
+  equipmentUtilization: Record<string, UtilizationResult>;
   projects: { id: string; name: string }[];
   user: { id: string; role: UserRole };
 }
@@ -40,7 +46,7 @@ const EQUIPMENT_STATUS_BADGES: Record<EquipmentStatus, { label: string; bg: stri
   retired: { label: "Retired", bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-600 dark:text-slate-400" },
 };
 
-export function InventoryView({ items, equipment, projects, user }: InventoryViewProps) {
+export function InventoryView({ items, equipment, reorderSuggestions, equipmentUtilization, projects, user }: InventoryViewProps) {
   const router = useRouter();
   const supabase = createClient();
   const [tab, setTab] = useState<"materials" | "equipment">("materials");
@@ -57,6 +63,7 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
   const filteredEquipment = equipment.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()));
 
   const lowStockCount = items.filter((i) => i.quantity_on_hand <= i.reorder_level).length;
+  const reorderSuggestionCount = Object.keys(reorderSuggestions).length;
   const availableEquipCount = equipment.filter((e) => e.status === "available").length;
   const inUseEquipCount = equipment.filter((e) => e.status === "in_use").length;
 
@@ -119,7 +126,7 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print-card">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 print-card">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <Package className="w-5 h-5" />
@@ -136,6 +143,15 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
           <div>
             <p className="text-xs text-muted-foreground font-medium">Low Stock Alerts</p>
             <p className="text-lg font-bold text-foreground">{lowStockCount}</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3" title="Items projected to run out within 14 days based on the last 30 days of usage">
+          <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Reorder Suggestions</p>
+            <p className="text-lg font-bold text-foreground">{reorderSuggestionCount}</p>
           </div>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
@@ -215,11 +231,13 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
                     <th className="text-right font-medium px-4 py-3">Stock on Hand</th>
                     <th className="text-right font-medium px-4 py-3">Reorder Level</th>
                     <th className="text-right font-medium px-4 py-3">Unit Cost</th>
+                    <th className="text-left font-medium px-4 py-3">Reorder Suggestion</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredItems.map((item) => {
                     const isLow = item.quantity_on_hand <= item.reorder_level;
+                    const suggestion = reorderSuggestions[item.id];
                     return (
                       <tr key={item.id} className={cn("hover:bg-muted/20 transition-colors", isLow && "bg-rose-50/40 dark:bg-rose-950/10")}>
                         <td className="px-4 py-3 font-semibold text-foreground">{item.name}</td>
@@ -231,6 +249,24 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
                         </td>
                         <td className="px-4 py-3 text-right text-muted-foreground">{item.reorder_level.toLocaleString("en-IN")} {item.unit}</td>
                         <td className="px-4 py-3 text-right text-muted-foreground">{item.unit_cost != null ? `₹${item.unit_cost.toLocaleString("en-IN")}` : "—"}</td>
+                        <td className="px-4 py-3">
+                          {suggestion ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-lg",
+                                suggestion.urgency === "critical"
+                                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
+                                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
+                              )}
+                              title={`Averaging ${suggestion.avgDailyConsumption} ${item.unit}/day over the last 30 days`}
+                            >
+                              <Zap className="w-3 h-3" />
+                              ~{suggestion.daysUntilStockout}d left · order {suggestion.suggestedReorderQty.toLocaleString("en-IN")} {item.unit}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">—</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -266,6 +302,25 @@ export function InventoryView({ items, equipment, projects, user }: InventoryVie
                 <p className="text-xs text-muted-foreground mb-3">
                   {eq.current_project_name ? `Assigned: ${eq.current_project_name}` : "Unassigned"}
                 </p>
+
+                {(() => {
+                  const util = equipmentUtilization[eq.id];
+                  if (!util || !hasEnoughSignal(util)) {
+                    return <p className="text-[11px] text-muted-foreground italic mb-3">Utilization: not enough tracked history yet</p>;
+                  }
+                  return (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                        <span>Utilization ({util.trackedDays}d tracked)</span>
+                        <span className="font-semibold text-foreground">{util.utilizationPct}% in use</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
+                        <div className="h-full bg-indigo-500" style={{ width: `${util.utilizationPct}%` }} title="In use" />
+                        <div className="h-full bg-amber-400" style={{ width: `${util.maintenancePct}%` }} title="Maintenance" />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {canManage && (
                   <div className="pt-3 border-t border-border/60 flex flex-wrap gap-2">

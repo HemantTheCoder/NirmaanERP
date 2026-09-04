@@ -9,6 +9,7 @@ import { getProjectPunchItems } from "@/lib/queries/punch_list";
 import { getTodayDpr, getProjectDprHistory } from "@/lib/queries/dpr";
 import { getOpenDelay, getDelayHistory } from "@/lib/queries/delays";
 import { getProjectTaskDependencies } from "@/lib/queries/taskDependencies";
+import { getProjectPurchaseOrders } from "@/lib/queries/procurement";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -66,6 +67,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     openDelay,
     delayHistory,
     dependencies,
+    purchaseOrders,
   ] = await Promise.all([
     getProjectResources(supabase, id),
     getProjectDocuments(supabase, id),
@@ -77,6 +79,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     getOpenDelay(supabase, id),
     getDelayHistory(supabase, id),
     getProjectTaskDependencies(supabase, data.tasks.map((t: any) => t.id)),
+    getProjectPurchaseOrders(supabase, id),
   ]);
 
   return (
@@ -92,6 +95,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialOpenDelay={openDelay}
       initialDelayHistory={delayHistory}
       initialDependencies={dependencies}
+      initialPurchaseOrders={purchaseOrders}
       teamMembers={teamMembers}
       userId={user.id}
       userRole={userRole}

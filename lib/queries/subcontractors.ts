@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { computeSubcontractorTrustScore, type TrustScore } from "@/lib/utils/subcontractorTrust";
 
 export type SubcontractStatus = "draft" | "active" | "completed" | "terminated";
 
@@ -100,6 +101,55 @@ export async function getSubcontracts(
       review_count: ratings.length,
     };
   });
+}
+
+/**
+ * Trust score per vendor (see lib/utils/subcontractorTrust.ts), aggregated
+ * across every contract and review that vendor has ever had — not scoped to
+ * a single subcontract, so it reflects the vendor's whole track record.
+ * Meant to be surfaced right where a vendor is being picked for new work.
+ */
+export async function getVendorTrustScores(
+  supabase: SupabaseClient<Database>
+): Promise<Record<string, TrustScore>> {
+  const [{ data: contracts, error: contractsError }, { data: reviews, error: reviewsError }] =
+    await Promise.all([
+      (supabase.from("subcontracts") as any).select("vendor_id, status"),
+      (supabase.from("subcontractor_performance_reviews") as any).select(
+        "vendor_id, quality_rating, timeliness_rating, safety_rating"
+      ),
+    ]);
+
+  if (contractsError) {
+    console.error("Error fetching subcontracts for trust scores:", contractsError);
+  }
+  if (reviewsError) {
+    console.error("Error fetching reviews for trust scores:", reviewsError);
+  }
+
+  const contractsByVendor = new Map<string, { status: SubcontractStatus }[]>();
+  for (const c of contracts || []) {
+    const list = contractsByVendor.get(c.vendor_id) || [];
+    list.push({ status: c.status });
+    contractsByVendor.set(c.vendor_id, list);
+  }
+
+  const reviewsByVendor = new Map<string, { quality_rating: number; timeliness_rating: number; safety_rating: number }[]>();
+  for (const r of reviews || []) {
+    const list = reviewsByVendor.get(r.vendor_id) || [];
+    list.push({ quality_rating: r.quality_rating, timeliness_rating: r.timeliness_rating, safety_rating: r.safety_rating });
+    reviewsByVendor.set(r.vendor_id, list);
+  }
+
+  const vendorIds = new Set([...contractsByVendor.keys(), ...reviewsByVendor.keys()]);
+  const result: Record<string, TrustScore> = {};
+  for (const vendorId of vendorIds) {
+    result[vendorId] = computeSubcontractorTrustScore({
+      contracts: contractsByVendor.get(vendorId) || [],
+      reviews: reviewsByVendor.get(vendorId) || [],
+    });
+  }
+  return result;
 }
 
 /**

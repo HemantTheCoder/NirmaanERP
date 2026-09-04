@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   FileCheck2,
   Sun,
@@ -28,6 +29,10 @@ import {
   CheckSquare,
   Sparkles,
   Mic,
+  ShieldAlert,
+  Siren,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   submitDpr,
@@ -38,6 +43,7 @@ import {
   type DprChecklistItem,
   type WeatherCondition,
 } from "@/lib/queries/dpr";
+import { reportDelay } from "@/lib/queries/delays";
 import { updateTaskStatus } from "@/lib/queries/tasks";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
@@ -69,6 +75,19 @@ interface ChecklistDraft {
   description: string;
   is_completed: boolean;
   task_id: string | null;
+}
+
+interface TriageFlag {
+  detected: boolean;
+  reason: string;
+  draftText: string;
+}
+interface TriageSafetyFlag extends TriageFlag {
+  severity: "minor" | "moderate" | "major";
+}
+interface TriageResult {
+  delayFlag: TriageFlag;
+  safetyFlag: TriageSafetyFlag;
 }
 
 /** Small tag marking an item as auto-fetched from a task, vs. typed by hand. */
@@ -220,6 +239,14 @@ export function DailyProgressReportView({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // AI triage — runs after a successful submit, reads the free-text fields
+  // for a delay/safety signal the author mentioned but didn't formally log.
+  const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
+  const [isTriaging, setIsTriaging] = useState(false);
+  const [delayReportState, setDelayReportState] = useState<"idle" | "submitting" | "done" | "error">("idle");
+  const [delayReportError, setDelayReportError] = useState<string | null>(null);
+  const [copiedSafetyDraft, setCopiedSafetyDraft] = useState(false);
+
   // Opt-in "also mark task as Done" — deliberately not automatic. Tracked
   // client-side per session so the button can show confirmation without a
   // full task refetch; doesn't need to survive a reload.
@@ -301,6 +328,61 @@ export function DailyProgressReportView({
       setAiDraftError("Failed to reach the AI drafting service.");
     } finally {
       setAiDrafting(false);
+    }
+  };
+
+  const runTriage = async (report: DailyProgressReport) => {
+    setIsTriaging(true);
+    setTriageResult(null);
+    setDelayReportState("idle");
+    setDelayReportError(null);
+    try {
+      const res = await fetch("/api/ai/dpr-triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          workCompleted: report.work_completed,
+          delaysEncountered: report.delays_encountered,
+        }),
+      });
+      const result = await res.json().catch(() => null);
+      if (res.ok && result) {
+        setTriageResult(result as TriageResult);
+      }
+    } catch {
+      // Triage is a bonus signal on top of a report that already saved successfully — fail silently
+    } finally {
+      setIsTriaging(false);
+    }
+  };
+
+  const handleReportDelayFromTriage = async () => {
+    if (!triageResult?.delayFlag.draftText || !todayReport) return;
+    setDelayReportState("submitting");
+    setDelayReportError(null);
+    const res = await reportDelay(supabase, {
+      projectId,
+      reason: triageResult.delayFlag.draftText,
+      reportedBy: user.id,
+      dprId: todayReport.id,
+    });
+    if (!res.success) {
+      setDelayReportState("error");
+      setDelayReportError(res.error || "Failed to report delay.");
+      return;
+    }
+    setDelayReportState("done");
+  };
+
+  const handleCopySafetyDraft = async () => {
+    if (!triageResult?.safetyFlag.draftText) return;
+    try {
+      await navigator.clipboard.writeText(triageResult.safetyFlag.draftText);
+      setCopiedSafetyDraft(true);
+      setTimeout(() => setCopiedSafetyDraft(false), 2000);
+    } catch {
+      // Clipboard API unavailable in this browser context — non-critical
     }
   };
 
@@ -394,6 +476,7 @@ export function DailyProgressReportView({
     setSuccessMsg(todayReport ? "Today's Daily Progress Report updated!" : "Today's Daily Progress Report submitted!");
     setTodayReport(saved);
     setIsEditingForm(false);
+    runTriage(saved);
 
     // Update history list
     setHistory((prev) => {
@@ -426,6 +509,75 @@ export function DailyProgressReportView({
           <button onClick={() => setSuccessMsg(null)} className="p-1 hover:opacity-80">
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* AI Triage — reads the just-submitted report for a delay/safety signal mentioned but not formally logged */}
+      {isTriaging && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-xs text-muted-foreground">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Checking today&apos;s report for delay/safety signals…
+        </div>
+      )}
+
+      {triageResult?.delayFlag.detected && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 space-y-2">
+          <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            AI noticed a possible delay in today&apos;s report
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400/90">{triageResult.delayFlag.reason}</p>
+          <p className="text-xs text-foreground bg-card border border-border rounded-lg px-3 py-2 italic">
+            &ldquo;{triageResult.delayFlag.draftText}&rdquo;
+          </p>
+          {delayReportState === "done" ? (
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Delay reported.
+            </p>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleReportDelayFromTriage}
+                disabled={delayReportState === "submitting"}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-lg disabled:opacity-60 transition-all"
+              >
+                {delayReportState === "submitting" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Report This as a Delay
+              </button>
+              {delayReportError && <span className="text-[11px] text-rose-600 dark:text-rose-400">{delayReportError}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {triageResult?.safetyFlag.detected && (
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 space-y-2">
+          <p className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+            <Siren className="w-3.5 h-3.5" />
+            AI noticed a possible safety issue in today&apos;s report ({triageResult.safetyFlag.severity})
+          </p>
+          <p className="text-xs text-rose-700 dark:text-rose-400/90">{triageResult.safetyFlag.reason}</p>
+          <p className="text-xs text-foreground bg-card border border-border rounded-lg px-3 py-2 italic">
+            &ldquo;{triageResult.safetyFlag.draftText}&rdquo;
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCopySafetyDraft}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-card border border-border hover:bg-secondary text-foreground rounded-lg transition-all"
+            >
+              {copiedSafetyDraft ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedSafetyDraft ? "Copied" : "Copy Draft"}
+            </button>
+            <Link
+              href="/safety"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-all"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Log in Safety Module
+            </Link>
+          </div>
         </div>
       )}
 

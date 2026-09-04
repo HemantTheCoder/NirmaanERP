@@ -5,6 +5,7 @@ import { X, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createSubcontract } from "@/lib/queries/subcontractors";
 import type { Vendor } from "@/lib/queries/procurement";
+import type { TrustScore } from "@/lib/utils/subcontractorTrust";
 
 interface CreateSubcontractModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateSubcontractModalProps {
   userId: string;
   projects: { id: string; name: string }[];
   vendors: Vendor[];
+  vendorTrust: Record<string, TrustScore>;
   onCreated: () => void;
 }
 
@@ -21,6 +23,7 @@ export function CreateSubcontractModal({
   userId,
   projects,
   vendors,
+  vendorTrust,
   onCreated,
 }: CreateSubcontractModalProps) {
   const supabase = createClient();
@@ -110,12 +113,33 @@ export function CreateSubcontractModal({
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Select subcontractor</option>
-                {vendors.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
+                {[...vendors]
+                  .sort((a, b) => (vendorTrust[b.id]?.score ?? -1) - (vendorTrust[a.id]?.score ?? -1))
+                  .map((v) => {
+                    const trust = vendorTrust[v.id];
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                        {trust && trust.reviewCount > 0 ? ` — ${trust.label} (${trust.score}/100)` : ""}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
           </div>
+
+          {vendorId && vendorTrust[vendorId] && (
+            <div className="px-3 py-2 bg-muted/40 rounded-lg text-xs flex items-center justify-between">
+              <span className="text-muted-foreground">Vendor trust score</span>
+              <span className="font-semibold text-foreground">
+                {vendorTrust[vendorId].label} ({vendorTrust[vendorId].score}/100)
+                {vendorTrust[vendorId].reviewCount > 0 && ` · ${vendorTrust[vendorId].reviewCount} review${vendorTrust[vendorId].reviewCount === 1 ? "" : "s"}`}
+                {vendorTrust[vendorId].terminatedContracts > 0 && (
+                  <span className="text-rose-600 dark:text-rose-400"> · {vendorTrust[vendorId].terminatedContracts} terminated contract{vendorTrust[vendorId].terminatedContracts === 1 ? "" : "s"}</span>
+                )}
+              </span>
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-medium text-muted-foreground">Scope of work</label>

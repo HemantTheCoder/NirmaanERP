@@ -37,7 +37,10 @@ import { DelayStatusPanel } from "@/components/projects/DelayStatusPanel";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 import type { TaskDependencyLink } from "@/lib/queries/taskDependencies";
+import type { PurchaseOrderWithDetails } from "@/lib/queries/procurement";
 import { computeCriticalPath } from "@/lib/utils/criticalPath";
+import { computeDelayRisk } from "@/lib/utils/delayRisk";
+import { averageDaysToRectify } from "@/lib/queries/delays";
 
 interface ProjectDetailViewProps {
   project: {
@@ -59,6 +62,7 @@ interface ProjectDetailViewProps {
   initialOpenDelay: ProjectDelay | null;
   initialDelayHistory: ProjectDelay[];
   initialDependencies: TaskDependencyLink[];
+  initialPurchaseOrders: PurchaseOrderWithDetails[];
   teamMembers?: any[];
   userId: string;
   userRole: UserRole;
@@ -76,6 +80,7 @@ export function ProjectDetailView({
   initialOpenDelay,
   initialDelayHistory,
   initialDependencies,
+  initialPurchaseOrders,
   teamMembers = [],
   userId,
   userRole,
@@ -99,6 +104,33 @@ export function ProjectDetailView({
   const criticalPath = useMemo(
     () => computeCriticalPath(tasks, dependencies),
     [tasks, dependencies]
+  );
+
+  // Predictive delay risk — flags tasks trending late before they're
+  // actually overdue, using the critical path above plus this project's own
+  // delay and procurement history. Pure client-side over already-fetched
+  // data, so it stays in sync with everything else on this page.
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const overdueVendorDeliveries = useMemo(
+    () =>
+      initialPurchaseOrders.filter(
+        (po) =>
+          po.expected_delivery_date &&
+          po.expected_delivery_date < todayStr &&
+          po.status !== "received" &&
+          po.status !== "cancelled" &&
+          po.status !== "rejected"
+      ).length,
+    [initialPurchaseOrders, todayStr]
+  );
+  const delayRiskByTaskId = useMemo(
+    () =>
+      computeDelayRisk(tasks, dependencies, criticalPath.criticalTaskIds, {
+        pastDelayCount: initialDelayHistory.length,
+        avgDaysToRectify: averageDaysToRectify(initialDelayHistory),
+        overdueVendorDeliveries,
+      }, todayStr),
+    [tasks, dependencies, criticalPath.criticalTaskIds, initialDelayHistory, overdueVendorDeliveries, todayStr]
   );
 
   const handleTaskUpdate = (updatedTask: any) => {
@@ -383,6 +415,7 @@ export function ProjectDetailView({
             dependencies={dependencies}
             criticalTaskIds={criticalPath.criticalTaskIds}
             criticalLinkKeys={criticalPath.criticalLinkKeys}
+            delayRiskByTaskId={delayRiskByTaskId}
             onTaskClick={(task) => setSelectedTask(task)}
           />
         )}
@@ -445,6 +478,7 @@ export function ProjectDetailView({
         onUpdateSuccess={handleTaskUpdate}
         allTasks={tasks}
         dependencies={dependencies}
+        delayRisk={selectedTask ? delayRiskByTaskId.get(selectedTask.id) : undefined}
         userId={userId}
         userRole={userRole}
         onDependenciesChange={setDependencies}

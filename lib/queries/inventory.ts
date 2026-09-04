@@ -151,6 +151,42 @@ export async function getInventoryTransactions(
 }
 
 /**
+ * Every transaction across all items since `sinceDate` (YYYY-MM-DD) —
+ * unlike getInventoryTransactions (capped at `limit`, portfolio-wide most
+ * recent), this is scoped by date so a burn-rate calc over N items doesn't
+ * silently drop older items' history once the recent-N cap fills up with
+ * activity from a few busy ones.
+ */
+export async function getInventoryTransactionsSince(
+  supabase: SupabaseClient<Database>,
+  sinceDate: string
+): Promise<InventoryTransaction[]> {
+  const { data, error } = await (supabase.from("inventory_transactions") as any)
+    .select(`*, inventory_items ( name ), users!performed_by ( full_name )`)
+    .gte("transaction_date", sinceDate)
+    .order("transaction_date", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching inventory transactions since date:", error);
+    return [];
+  }
+
+  return (data || []).map((t: any) => ({
+    id: t.id,
+    inventory_item_id: t.inventory_item_id,
+    item_name: t.inventory_items?.name || null,
+    transaction_type: t.transaction_type as InventoryTransactionType,
+    quantity: Number(t.quantity),
+    reference: t.reference,
+    performed_by: t.performed_by,
+    performer_name: t.users?.full_name || null,
+    transaction_date: t.transaction_date,
+    notes: t.notes,
+    created_at: t.created_at,
+  }));
+}
+
+/**
  * Record an inventory transaction (receipt/issue/return/adjustment)
  */
 export async function createInventoryTransaction(
@@ -246,6 +282,32 @@ export async function updateEquipmentStatus(
     .single();
 
   return { data, error };
+}
+
+export interface EquipmentStatusHistoryEntry {
+  equipment_id: string;
+  status: EquipmentStatus;
+  changed_at: string;
+}
+
+/**
+ * Full status-change log across all equipment (supabase/migrations/
+ * 0047_equipment_status_history.sql) — feeds lib/utils/equipmentUtilization.ts.
+ * Written only by a DB trigger, so this is purely a read.
+ */
+export async function getEquipmentStatusHistory(
+  supabase: SupabaseClient<Database>
+): Promise<EquipmentStatusHistoryEntry[]> {
+  const { data, error } = await (supabase.from("equipment_status_history") as any)
+    .select("equipment_id, status, changed_at")
+    .order("changed_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching equipment status history:", error);
+    return [];
+  }
+
+  return (data || []) as EquipmentStatusHistoryEntry[];
 }
 
 /**
