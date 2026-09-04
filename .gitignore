@@ -42,3 +42,5 @@ next-env.d.ts
 
 # scripts (one-off seeders)
 scripts/
+tmp-demo-video/
+nirmaan-sandbox-demo.mp4

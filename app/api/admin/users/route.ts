@@ -62,13 +62,43 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { email, full_name, role } = body;
+    const { email, full_name, role, client_project_id } = body;
 
     if (!email || !role) {
       return NextResponse.json({ error: "Email and role are required" }, { status: 400 });
     }
 
+    if (role === "client" && !client_project_id) {
+      return NextResponse.json(
+        { error: "A linked project is required when inviting a client account" },
+        { status: 400 }
+      );
+    }
+
     const serviceClient = getServiceRoleClient();
+
+    // Validate the target project up front, before creating any account, so a
+    // bad project pick fails clean instead of leaving an orphaned auth user.
+    if (role === "client" && client_project_id) {
+      const { data: project, error: projectErr } = await (serviceClient.from("projects") as any)
+        .select("id, name, client_id")
+        .eq("id", client_project_id)
+        .maybeSingle();
+
+      if (projectErr || !project) {
+        return NextResponse.json({ error: "Selected project not found" }, { status: 400 });
+      }
+
+      if (project.client_id) {
+        return NextResponse.json(
+          {
+            error: `"${project.name}" is already linked to a different client account. Unlink it from Edit Project first.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const tempPassword = "Demo@" + Math.random().toString(36).slice(-6) + "1!";
 
     // Create auth user with email_confirm: true so user can log in immediately
@@ -104,6 +134,20 @@ export async function POST(req: Request) {
       );
     }
 
+    // Link the client to their project. Best-effort: the account itself is
+    // already provisioned at this point, so a failure here is surfaced as a
+    // warning rather than rolling back the whole invite.
+    let linkWarning: string | undefined;
+    if (role === "client" && client_project_id) {
+      const { error: linkErr } = await (serviceClient.from("projects") as any)
+        .update({ client_id: userId })
+        .eq("id", client_project_id);
+
+      if (linkErr) {
+        linkWarning = `Account created, but linking to the project failed: ${linkErr.message}. Link it manually from Edit Project.`;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -113,6 +157,7 @@ export async function POST(req: Request) {
         role,
         tempPassword,
       },
+      warning: linkWarning,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });

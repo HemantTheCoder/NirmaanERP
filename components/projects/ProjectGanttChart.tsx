@@ -30,11 +30,24 @@ interface GanttTask {
   assignee_name?: string | null;
 }
 
+interface GanttDependencyLink {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+}
+
 interface ProjectGanttChartProps {
   projectName?: string;
   tasks: GanttTask[];
+  dependencies?: GanttDependencyLink[];
+  /** From lib/utils/criticalPath.ts — tasks/links on the longest chain through the dependency graph. */
+  criticalTaskIds?: Set<string>;
+  criticalLinkKeys?: Set<string>;
   onTaskClick?: (task: GanttTask) => void;
 }
+
+const ROW_HEIGHT = 56; // px — matches the h-14 row class below
+const TASK_COL_WIDTH = 320; // px — matches the sticky w-80 task column below
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string; hex: string }> = {
   done:        { bg: "bg-emerald-500 dark:bg-emerald-600", border: "border-emerald-600", text: "text-white", hex: "#10b981" },
@@ -46,6 +59,9 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string; 
 export function ProjectGanttChart({
   projectName = "Project Timeline",
   tasks,
+  dependencies = [],
+  criticalTaskIds,
+  criticalLinkKeys,
   onTaskClick,
 }: ProjectGanttChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -181,6 +197,29 @@ export function ProjectGanttChart({
     const diff = Math.ceil((d.getTime() - s.getTime()) / (1000 * 3600 * 24)) + 1;
     return diff > 0 ? diff : 1;
   };
+
+  // Per-task bar geometry in the dependency-arrow overlay's coordinate space
+  // (x=0 at the far-left edge of the row, i.e. including the sticky task
+  // column — same convention the "today marker" line already uses below).
+  // Must run before the tasks.length===0 early return since hooks can't be
+  // conditional.
+  const taskLayout = useMemo(() => {
+    const map = new Map<string, { left: number; width: number; top: number }>();
+    tasks.forEach((task, idx) => {
+      const taskStartStr = task.start_date || task.created_at.slice(0, 10);
+      const startOffsetDays = getDayOffset(taskStartStr);
+      const durationDays = getTaskDurationDays(taskStartStr, task.due_date);
+      const leftPx = startOffsetDays * dayWidth;
+      const barWidthPx = Math.max(durationDays * dayWidth - 4, 16);
+      map.set(task.id, {
+        left: TASK_COL_WIDTH + leftPx + 2,
+        width: barWidthPx,
+        top: idx * ROW_HEIGHT + ROW_HEIGHT / 2,
+      });
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, dayWidth, startDate]);
 
   // ── Export Functions ────────────────────────────────────────────────────────
 
@@ -458,6 +497,12 @@ export function ProjectGanttChart({
             <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
             Today Marker
           </span>
+          {criticalTaskIds && criticalTaskIds.size > 0 && (
+            <span className="flex items-center gap-1" title="The longest chain of dependent tasks — a slip anywhere on this chain delays the whole project">
+              <span className="w-3 h-3 rounded ring-2 ring-orange-400 bg-transparent inline-block" />
+              Critical Path ({criticalTaskIds.size} task{criticalTaskIds.size === 1 ? "" : "s"})
+            </span>
+          )}
         </div>
       </div>
 
@@ -533,6 +578,48 @@ export function ProjectGanttChart({
                 </div>
               )}
 
+              {/* Dependency Arrows Overlay — predecessor's bar end to successor's bar start */}
+              {dependencies.length > 0 && (
+                <svg
+                  className="absolute top-0 left-0 z-10 pointer-events-none overflow-visible"
+                  width={TASK_COL_WIDTH + timelineWidthPx}
+                  height={tasks.length * ROW_HEIGHT}
+                >
+                  <defs>
+                    <marker id="gantt-dep-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                    </marker>
+                    <marker id="gantt-dep-arrow-critical" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f43f5e" />
+                    </marker>
+                  </defs>
+                  {dependencies.map((link) => {
+                    const from = taskLayout.get(link.depends_on_task_id);
+                    const to = taskLayout.get(link.task_id);
+                    if (!from || !to) return null; // stale/cross-project link — task no longer in this view
+
+                    const isCritical = criticalLinkKeys?.has(`${link.task_id}->${link.depends_on_task_id}`);
+                    const x1 = from.left + from.width;
+                    const y1 = from.top;
+                    const x2 = to.left;
+                    const y2 = to.top;
+                    const midX = x1 + Math.max(16, (x2 - x1) / 2);
+
+                    return (
+                      <path
+                        key={link.id}
+                        d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
+                        fill="none"
+                        stroke={isCritical ? "#f43f5e" : "#94a3b8"}
+                        strokeWidth={isCritical ? 2 : 1.5}
+                        opacity={isCritical ? 0.9 : 0.55}
+                        markerEnd={isCritical ? "url(#gantt-dep-arrow-critical)" : "url(#gantt-dep-arrow)"}
+                      />
+                    );
+                  })}
+                </svg>
+              )}
+
               {tasks.map((task) => {
                 const taskStartStr = task.start_date || task.created_at.slice(0, 10);
                 const taskDueStr = task.due_date || taskStartStr;
@@ -549,6 +636,7 @@ export function ProjectGanttChart({
                   task.status !== "done";
 
                 const isDone = task.status === "done";
+                const isCriticalTask = criticalTaskIds?.has(task.id);
                 const colors = STATUS_COLORS[task.status] || STATUS_COLORS.todo;
 
                 const assigneeInitials = (task.assignee_name || "Unassigned")
@@ -606,11 +694,13 @@ export function ProjectGanttChart({
                           left: `${leftPx + 2}px`,
                           width: `${barWidthPx}px`,
                         }}
+                        title={isCriticalTask ? "On the critical path — a slip here pushes the whole project out" : undefined}
                         className={cn(
                           "absolute h-7 rounded-lg flex items-center px-2.5 text-xs font-bold transition-all shadow-xs cursor-pointer select-none",
                           colors.bg,
                           colors.text,
-                          isOverdue && "border-2 border-rose-500 ring-2 ring-rose-500/20"
+                          isOverdue && "border-2 border-rose-500 ring-2 ring-rose-500/20",
+                          !isOverdue && isCriticalTask && "ring-2 ring-offset-1 ring-orange-400 dark:ring-offset-background"
                         )}
                       >
                         <div className="flex items-center justify-between w-full truncate gap-1">

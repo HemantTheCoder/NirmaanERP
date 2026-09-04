@@ -75,7 +75,7 @@ export async function getClientDocuments(
   const { data, error } = await (supabase.from("project_documents") as any)
     .select(`
       *,
-      uploader:users!project_documents_uploaded_by_fkey(full_name, email)
+      uploader:users!project_documents_uploaded_by_fkey(full_name)
     `)
     .eq("project_id", projectId)
     .neq("category", "contract")

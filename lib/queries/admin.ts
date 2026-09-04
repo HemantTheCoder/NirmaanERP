@@ -183,7 +183,13 @@ export async function toggleUserActive(
 }
 
 /**
- * Check if a user has orphan references across all 11 relational tables
+ * Check if a user has orphan references across every relational table with
+ * a foreign key to users(id) — 29 tables as of this writing. Many of these
+ * (daily_progress_reports.submitted_by, messages.sender_id/recipient_id,
+ * expenses.logged_by, punch_items.created_by, etc.) are ON DELETE CASCADE:
+ * missing one here doesn't just leave a dangling reference, it means the
+ * delete silently wipes that user's real business records with no warning.
+ * This list needs to grow every time a migration adds a new users(id) FK.
  */
 export async function checkUserOrphanStatus(
   supabase: SupabaseClient<Database>,
@@ -220,6 +226,32 @@ export async function checkUserOrphanStatus(
     { count: safetyAssigneeCount },
     { count: grievanceSubmitterCount },
     { count: grievanceAssigneeCount },
+    { count: dprSubmitterCount },
+    { count: delayReporterCount },
+    { count: delayRectifierCount },
+    { count: signatureCount },
+    { count: poCreatorCount },
+    { count: poApproverCount },
+    { count: subcontractCreatorCount },
+    { count: perfReviewerCount },
+    { count: inventoryItemCreatorCount },
+    { count: inventoryTxnCount },
+    { count: equipmentCreatorCount },
+    { count: equipmentLogCount },
+    { count: rfiRaiserCount },
+    { count: rfiAssigneeCount },
+    { count: changeOrderRequesterCount },
+    { count: changeOrderApproverCount },
+    { count: tenderCreatorCount },
+    { count: bidContractorCount },
+    { count: bidReviewerCount },
+    { count: messageSenderCount },
+    { count: messageRecipientCount },
+    { count: punchCreatorCount },
+    { count: punchAssigneeCount },
+    { count: expenseLoggerCount },
+    { count: expenseApproverCount },
+    { count: taskDependencyCreatorCount },
   ] = await Promise.all([
     supabase.from("tasks").select("id", { count: "exact", head: true }).eq("assignee_id", targetUserId),
     supabase.from("projects").select("id", { count: "exact", head: true }).eq("manager_id", targetUserId),
@@ -237,6 +269,32 @@ export async function checkUserOrphanStatus(
     supabase.from("safety_incidents").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
     supabase.from("grievances").select("id", { count: "exact", head: true }).eq("submitted_by", targetUserId),
     supabase.from("grievances").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
+    supabase.from("daily_progress_reports").select("id", { count: "exact", head: true }).eq("submitted_by", targetUserId),
+    supabase.from("project_delays").select("id", { count: "exact", head: true }).eq("reported_by", targetUserId),
+    supabase.from("project_delays").select("id", { count: "exact", head: true }).eq("rectified_by", targetUserId),
+    supabase.from("signature_acknowledgments").select("id", { count: "exact", head: true }).eq("signed_by", targetUserId),
+    supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("approved_by", targetUserId),
+    supabase.from("subcontracts").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("subcontractor_performance_reviews").select("id", { count: "exact", head: true }).eq("reviewed_by", targetUserId),
+    supabase.from("inventory_items").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("inventory_transactions").select("id", { count: "exact", head: true }).eq("performed_by", targetUserId),
+    supabase.from("equipment_assets").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("equipment_maintenance_logs").select("id", { count: "exact", head: true }).eq("performed_by", targetUserId),
+    supabase.from("rfis").select("id", { count: "exact", head: true }).eq("raised_by", targetUserId),
+    supabase.from("rfis").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
+    supabase.from("change_orders").select("id", { count: "exact", head: true }).eq("requested_by", targetUserId),
+    supabase.from("change_orders").select("id", { count: "exact", head: true }).eq("approved_by", targetUserId),
+    supabase.from("tenders").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("bids").select("id", { count: "exact", head: true }).eq("contractor_id", targetUserId),
+    supabase.from("bids").select("id", { count: "exact", head: true }).eq("reviewed_by", targetUserId),
+    supabase.from("messages").select("id", { count: "exact", head: true }).eq("sender_id", targetUserId),
+    supabase.from("messages").select("id", { count: "exact", head: true }).eq("recipient_id", targetUserId),
+    supabase.from("punch_items").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
+    supabase.from("punch_items").select("id", { count: "exact", head: true }).eq("assigned_to", targetUserId),
+    supabase.from("expenses").select("id", { count: "exact", head: true }).eq("logged_by", targetUserId),
+    supabase.from("expenses").select("id", { count: "exact", head: true }).eq("approved_by", targetUserId),
+    supabase.from("task_dependencies").select("id", { count: "exact", head: true }).eq("created_by", targetUserId),
   ]);
 
   if ((taskCount ?? 0) > 0) reasons.push(`Assigned to ${taskCount} task(s)`);
@@ -255,6 +313,32 @@ export async function checkUserOrphanStatus(
   if ((safetyAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${safetyAssigneeCount} safety incident(s)`);
   if ((grievanceSubmitterCount ?? 0) > 0) reasons.push(`Submitted ${grievanceSubmitterCount} grievance(s)`);
   if ((grievanceAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${grievanceAssigneeCount} grievance(s)`);
+  if ((dprSubmitterCount ?? 0) > 0) reasons.push(`Submitted ${dprSubmitterCount} daily progress report(s)`);
+  if ((delayReporterCount ?? 0) > 0) reasons.push(`Reported ${delayReporterCount} project delay(s)`);
+  if ((delayRectifierCount ?? 0) > 0) reasons.push(`Rectified ${delayRectifierCount} project delay(s)`);
+  if ((signatureCount ?? 0) > 0) reasons.push(`Signed ${signatureCount} digital acknowledgment(s)`);
+  if ((poCreatorCount ?? 0) > 0) reasons.push(`Created ${poCreatorCount} purchase order(s)`);
+  if ((poApproverCount ?? 0) > 0) reasons.push(`Approver on ${poApproverCount} purchase order(s)`);
+  if ((subcontractCreatorCount ?? 0) > 0) reasons.push(`Created ${subcontractCreatorCount} subcontract(s)`);
+  if ((perfReviewerCount ?? 0) > 0) reasons.push(`Wrote ${perfReviewerCount} subcontractor performance review(s)`);
+  if ((inventoryItemCreatorCount ?? 0) > 0) reasons.push(`Created ${inventoryItemCreatorCount} inventory item(s)`);
+  if ((inventoryTxnCount ?? 0) > 0) reasons.push(`Performed ${inventoryTxnCount} inventory transaction(s)`);
+  if ((equipmentCreatorCount ?? 0) > 0) reasons.push(`Created ${equipmentCreatorCount} equipment asset(s)`);
+  if ((equipmentLogCount ?? 0) > 0) reasons.push(`Logged ${equipmentLogCount} equipment maintenance record(s)`);
+  if ((rfiRaiserCount ?? 0) > 0) reasons.push(`Raised ${rfiRaiserCount} RFI(s)`);
+  if ((rfiAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${rfiAssigneeCount} RFI(s)`);
+  if ((changeOrderRequesterCount ?? 0) > 0) reasons.push(`Requested ${changeOrderRequesterCount} change order(s)`);
+  if ((changeOrderApproverCount ?? 0) > 0) reasons.push(`Approver on ${changeOrderApproverCount} change order(s)`);
+  if ((tenderCreatorCount ?? 0) > 0) reasons.push(`Created ${tenderCreatorCount} tender(s)`);
+  if ((bidContractorCount ?? 0) > 0) reasons.push(`Submitted ${bidContractorCount} bid(s)`);
+  if ((bidReviewerCount ?? 0) > 0) reasons.push(`Reviewed ${bidReviewerCount} bid(s)`);
+  if ((messageSenderCount ?? 0) > 0) reasons.push(`Sent ${messageSenderCount} message(s)`);
+  if ((messageRecipientCount ?? 0) > 0) reasons.push(`Received ${messageRecipientCount} message(s)`);
+  if ((punchCreatorCount ?? 0) > 0) reasons.push(`Logged ${punchCreatorCount} punch list item(s)`);
+  if ((punchAssigneeCount ?? 0) > 0) reasons.push(`Assigned to ${punchAssigneeCount} punch list item(s)`);
+  if ((expenseLoggerCount ?? 0) > 0) reasons.push(`Logged ${expenseLoggerCount} expense(s)`);
+  if ((expenseApproverCount ?? 0) > 0) reasons.push(`Approver on ${expenseApproverCount} expense(s)`);
+  if ((taskDependencyCreatorCount ?? 0) > 0) reasons.push(`Created ${taskDependencyCreatorCount} task dependency link(s)`);
 
   return {
     canDelete: reasons.length === 0,

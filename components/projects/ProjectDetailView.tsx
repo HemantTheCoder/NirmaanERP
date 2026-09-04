@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -36,6 +36,8 @@ import type { ProjectDelay } from "@/lib/queries/delays";
 import { DelayStatusPanel } from "@/components/projects/DelayStatusPanel";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
+import type { TaskDependencyLink } from "@/lib/queries/taskDependencies";
+import { computeCriticalPath } from "@/lib/utils/criticalPath";
 
 interface ProjectDetailViewProps {
   project: {
@@ -56,6 +58,7 @@ interface ProjectDetailViewProps {
   initialDprHistory: DailyProgressReport[];
   initialOpenDelay: ProjectDelay | null;
   initialDelayHistory: ProjectDelay[];
+  initialDependencies: TaskDependencyLink[];
   teamMembers?: any[];
   userId: string;
   userRole: UserRole;
@@ -72,6 +75,7 @@ export function ProjectDetailView({
   initialDprHistory,
   initialOpenDelay,
   initialDelayHistory,
+  initialDependencies,
   teamMembers = [],
   userId,
   userRole,
@@ -79,6 +83,7 @@ export function ProjectDetailView({
   const router = useRouter();
 
   const [tasks, setTasks] = useState<any[]>(initialTasks);
+  const [dependencies, setDependencies] = useState<TaskDependencyLink[]>(initialDependencies);
   const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr">("tasks");
 
   // Modal State
@@ -88,6 +93,13 @@ export function ProjectDetailView({
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.status === "done").length;
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Longest-path chain through the dependency graph — recomputed whenever
+  // tasks or links change, purely client-side over already-fetched data.
+  const criticalPath = useMemo(
+    () => computeCriticalPath(tasks, dependencies),
+    [tasks, dependencies]
+  );
 
   const handleTaskUpdate = (updatedTask: any) => {
     setTasks((prev) =>
@@ -368,6 +380,9 @@ export function ProjectDetailView({
           <ProjectGanttChart
             projectName={project.name}
             tasks={tasks}
+            dependencies={dependencies}
+            criticalTaskIds={criticalPath.criticalTaskIds}
+            criticalLinkKeys={criticalPath.criticalLinkKeys}
             onTaskClick={(task) => setSelectedTask(task)}
           />
         )}
@@ -428,6 +443,11 @@ export function ProjectDetailView({
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onUpdateSuccess={handleTaskUpdate}
+        allTasks={tasks}
+        dependencies={dependencies}
+        userId={userId}
+        userRole={userRole}
+        onDependenciesChange={setDependencies}
       />
 
       {/* Create Task Modal */}

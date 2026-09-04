@@ -10,18 +10,22 @@ export interface UpdateProfilePayload {
 export interface UserContactProfile {
   id: string;
   full_name: string | null;
-  email: string;
+  email: string | null;
   role: UserRole;
   phone: string | null;
   avatar_url: string | null;
+  /** True when email/phone were withheld because the viewer isn't the owner or an admin/PM. */
+  contactHidden: boolean;
 }
 
 /**
  * Basic contact info for any user — used by the read-only profile/contact
- * card. Deliberately selects only what's meant to be visible to other
- * dashboard users (name, role, email, phone, avatar); users_select_all RLS
- * technically allows reading every column, but this keeps the query itself
- * scoped to what the UI is meant to show.
+ * card. users_select_all RLS permits reading every column of any row, so the
+ * viewer-awareness below (not RLS) is what keeps phone/email private: the
+ * full row is only ever returned to the user themselves or to admin/PM, who
+ * need it for assignment and contact lookup. Everyone else gets the row with
+ * phone/email withheld (contactHidden: true) — same name/role/avatar visible
+ * to all, per public.users_public.
  */
 export async function getUserProfile(
   supabase: SupabaseClient<Database>,
@@ -37,7 +41,30 @@ export async function getUserProfile(
     throw new Error(`Failed to load profile: ${error.message}`);
   }
 
-  return data as UserContactProfile | null;
+  if (!data) return null;
+
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
+  let canSeeContact = false;
+  if (viewer) {
+    if (viewer.id === userId) {
+      canSeeContact = true;
+    } else {
+      const { data: viewerRow } = await (supabase.from("users") as any)
+        .select("role")
+        .eq("id", viewer.id)
+        .maybeSingle();
+      canSeeContact = viewerRow?.role === "admin" || viewerRow?.role === "project_manager";
+    }
+  }
+
+  if (canSeeContact) {
+    return { ...(data as UserContactProfile), contactHidden: false };
+  }
+
+  return { ...(data as UserContactProfile), email: null, phone: null, contactHidden: true };
 }
 
 /**

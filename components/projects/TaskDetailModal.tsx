@@ -2,18 +2,36 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { X, Loader2, Calendar, User, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, Loader2, Calendar, User, Clock, AlertTriangle, CheckCircle2, GitBranch, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { wouldCreateCycle } from "@/lib/utils/criticalPath";
+import { addTaskDependency, removeTaskDependency, type TaskDependencyLink } from "@/lib/queries/taskDependencies";
 
 interface TaskDetailModalProps {
   task: any | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdateSuccess: (updatedTask: any) => void;
+  /** Every task in the project, for the predecessor picker. */
+  allTasks: any[];
+  dependencies: TaskDependencyLink[];
+  userId: string;
+  userRole: string;
+  onDependenciesChange: (next: TaskDependencyLink[]) => void;
 }
 
-export function TaskDetailModal({ task, isOpen, onClose, onUpdateSuccess }: TaskDetailModalProps) {
+export function TaskDetailModal({
+  task,
+  isOpen,
+  onClose,
+  onUpdateSuccess,
+  allTasks,
+  dependencies,
+  userId,
+  userRole,
+  onDependenciesChange,
+}: TaskDetailModalProps) {
   const supabase = createClient();
 
   const [title, setTitle] = useState("");
@@ -26,6 +44,12 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateSuccess }: Task
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Predecessor picker
+  const [selectedDependsOn, setSelectedDependsOn] = useState("");
+  const [isAddingDependency, setIsAddingDependency] = useState(false);
+  const [removingLinkId, setRemovingLinkId] = useState<string | null>(null);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
+
   useEffect(() => {
     if (task) {
       setTitle(task.title || "");
@@ -35,10 +59,66 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateSuccess }: Task
       setStartDate(task.start_date || task.created_at?.slice(0, 10) || "");
       setDueDate(task.due_date || "");
       setErrorMsg(null);
+      setSelectedDependsOn("");
+      setDependencyError(null);
     }
   }, [task]);
 
   if (!isOpen || !task) return null;
+
+  // Mirrors task_dependencies_insert/delete RLS: the task's own assignee, or
+  // admin/PM. Gating the UI too so it doesn't offer a control that RLS will
+  // just reject.
+  const canManageDependencies =
+    userRole === "admin" || userRole === "project_manager" || task.assignee_id === userId;
+
+  // Predecessors already linked onto this task, resolved to their titles.
+  const predecessorLinks = dependencies
+    .filter((d) => d.task_id === task.id)
+    .map((link) => ({ link, task: allTasks.find((t) => t.id === link.depends_on_task_id) }))
+    .filter((x): x is { link: TaskDependencyLink; task: any } => !!x.task);
+
+  // Everything else in the project that isn't already a predecessor and
+  // isn't this task itself — candidates for a new dependency link.
+  const candidateTasks = allTasks.filter(
+    (t) => t.id !== task.id && !predecessorLinks.some((p) => p.link.depends_on_task_id === t.id)
+  );
+
+  const handleAddDependency = async () => {
+    if (!selectedDependsOn) return;
+    setDependencyError(null);
+
+    if (wouldCreateCycle(task.id, selectedDependsOn, dependencies)) {
+      setDependencyError("That would create a circular dependency — pick a different task.");
+      return;
+    }
+
+    setIsAddingDependency(true);
+    const res = await addTaskDependency(supabase, task.id, selectedDependsOn, userId);
+    setIsAddingDependency(false);
+
+    if (!res.success || !res.data) {
+      setDependencyError(res.error || "Failed to add dependency.");
+      return;
+    }
+
+    onDependenciesChange([...dependencies, res.data]);
+    setSelectedDependsOn("");
+  };
+
+  const handleRemoveDependency = async (linkId: string) => {
+    setDependencyError(null);
+    setRemovingLinkId(linkId);
+    const res = await removeTaskDependency(supabase, linkId);
+    setRemovingLinkId(null);
+
+    if (!res.success) {
+      setDependencyError(res.error || "Failed to remove dependency.");
+      return;
+    }
+
+    onDependenciesChange(dependencies.filter((d) => d.id !== linkId));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +272,78 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateSuccess }: Task
               </Link>
             ) : (
               <span className="font-semibold text-foreground">Unassigned</span>
+            )}
+          </div>
+
+          {/* Depends On — predecessor tasks that must finish before this one starts */}
+          <div className="p-3 bg-secondary/50 rounded-xl border border-border space-y-2.5">
+            <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <GitBranch className="w-3.5 h-3.5 text-indigo-500" />
+              Depends On
+            </label>
+
+            {predecessorLinks.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground italic">No predecessors — this task can start any time.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {predecessorLinks.map(({ link, task: dep }) => (
+                  <li
+                    key={link.id}
+                    className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-background border border-border rounded-lg text-xs"
+                  >
+                    <span className="truncate text-foreground font-medium">{dep.title}</span>
+                    {canManageDependencies && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDependency(link.id)}
+                        disabled={removingLinkId === link.id}
+                        className="text-muted-foreground hover:text-rose-500 disabled:opacity-50 shrink-0"
+                        title="Remove dependency"
+                      >
+                        {removingLinkId === link.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <X className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {canManageDependencies && candidateTasks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedDependsOn}
+                  onChange={(e) => setSelectedDependsOn(e.target.value)}
+                  className="flex-1 px-2.5 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Add a predecessor…</option>
+                  {candidateTasks.map((t) => {
+                    const disabled = wouldCreateCycle(task.id, t.id, dependencies);
+                    return (
+                      <option key={t.id} value={t.id} disabled={disabled}>
+                        {t.title}
+                        {disabled ? " (would create a cycle)" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddDependency}
+                  disabled={!selectedDependsOn || isAddingDependency}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 transition-all shrink-0"
+                >
+                  {isAddingDependency ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  Add
+                </button>
+              </div>
+            )}
+
+            {dependencyError && (
+              <p className="text-[11px] text-rose-600 dark:text-rose-400">{dependencyError}</p>
             )}
           </div>
 

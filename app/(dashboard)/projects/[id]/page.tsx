@@ -8,6 +8,7 @@ import { getProjectBudgetSummary } from "@/lib/queries/finance";
 import { getProjectPunchItems } from "@/lib/queries/punch_list";
 import { getTodayDpr, getProjectDprHistory } from "@/lib/queries/dpr";
 import { getOpenDelay, getDelayHistory } from "@/lib/queries/delays";
+import { getProjectTaskDependencies } from "@/lib/queries/taskDependencies";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -48,8 +49,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   const userRole = (profile?.role ?? "site_staff") as UserRole;
 
+  const data = await getProjectById(supabase, id);
+
+  if (!data) {
+    notFound();
+  }
+
   const [
-    data,
     resources,
     documents,
     budgetSummary,
@@ -59,8 +65,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     teamMembers,
     openDelay,
     delayHistory,
+    dependencies,
   ] = await Promise.all([
-    getProjectById(supabase, id),
     getProjectResources(supabase, id),
     getProjectDocuments(supabase, id),
     getProjectBudgetSummary(supabase, id, user.id, userRole),
@@ -70,11 +76,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     getProjectManagers(supabase),
     getOpenDelay(supabase, id),
     getDelayHistory(supabase, id),
+    getProjectTaskDependencies(supabase, data.tasks.map((t: any) => t.id)),
   ]);
-
-  if (!data) {
-    notFound();
-  }
 
   return (
     <ProjectDetailView
@@ -88,6 +91,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialDprHistory={dprHistory}
       initialOpenDelay={openDelay}
       initialDelayHistory={delayHistory}
+      initialDependencies={dependencies}
       teamMembers={teamMembers}
       userId={user.id}
       userRole={userRole}

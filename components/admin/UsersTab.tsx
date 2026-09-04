@@ -57,8 +57,20 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<UserRole>("site_staff");
+  const [inviteProjectId, setInviteProjectId] = useState("");
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword?: string } | null>(null);
+  const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword?: string; warning?: string } | null>(null);
+
+  // Projects available for linking a new client account to
+  const [projects, setProjects] = useState<{ id: string; name: string; client_id: string | null }[]>([]);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+
+  const ensureProjectsLoaded = async () => {
+    if (projectsLoaded) return;
+    const { data } = await (supabase.from("projects") as any).select("id, name, client_id").order("name");
+    setProjects(data || []);
+    setProjectsLoaded(true);
+  };
 
   // Delete Confirmation & Orphan Modal State
   const [userToDelete, setUserToDelete] = useState<AdminUserItem | null>(null);
@@ -162,6 +174,10 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail) return;
+    if (inviteRole === "client" && !inviteProjectId) {
+      setErrorMsg("Select the project this client account should be linked to");
+      return;
+    }
 
     setIsSubmittingInvite(true);
     setErrorMsg(null);
@@ -174,6 +190,7 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
           email: inviteEmail,
           full_name: inviteName,
           role: inviteRole,
+          client_project_id: inviteRole === "client" ? inviteProjectId : undefined,
         }),
       });
 
@@ -186,7 +203,9 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
         setInviteResult({
           email: data.user.email,
           tempPassword: data.user.tempPassword,
+          warning: data.warning,
         });
+        setProjectsLoaded(false); // force a refetch next time so the newly-linked project shows up-to-date
         onRefreshNeeded();
       }
     } catch (err: any) {
@@ -200,6 +219,7 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
     setInviteEmail("");
     setInviteName("");
     setInviteRole("site_staff");
+    setInviteProjectId("");
     setInviteResult(null);
     setCopiedPassword(false);
   };
@@ -265,7 +285,10 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
 
         {/* Invite User Button */}
         <button
-          onClick={() => setShowInviteModal(true)}
+          onClick={() => {
+            setShowInviteModal(true);
+            ensureProjectsLoaded();
+          }}
           className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shrink-0"
         >
           <UserPlus className="w-4 h-4" />
@@ -450,6 +473,12 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
                     Account for <span className="font-semibold text-foreground">{inviteResult.email}</span> has been provisioned and activated.
                   </p>
 
+                  {inviteResult.warning && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-left text-[11px] text-amber-800 dark:text-amber-300">
+                      {inviteResult.warning}
+                    </div>
+                  )}
+
                   {inviteResult.tempPassword && (
                     <div className="p-3 bg-secondary rounded-lg border border-border text-left">
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
@@ -510,7 +539,11 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
                     <label className="block text-xs font-semibold text-foreground mb-1">System Role</label>
                     <select
                       value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value as UserRole)}
+                      onChange={(e) => {
+                        const newRole = e.target.value as UserRole;
+                        setInviteRole(newRole);
+                        if (newRole === "client") ensureProjectsLoaded();
+                      }}
                       className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       {ROLE_OPTIONS.map((r) => (
@@ -520,6 +553,32 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
                       ))}
                     </select>
                   </div>
+
+                  {inviteRole === "client" && (
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1">Linked Project</label>
+                      <select
+                        required
+                        value={inviteProjectId}
+                        onChange={(e) => setInviteProjectId(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">
+                          {projectsLoaded ? "Select a project…" : "Loading projects…"}
+                        </option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id} disabled={!!p.client_id}>
+                            {p.name}
+                            {p.client_id ? " (already linked to a client)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        The client will only see this project's data — set from{" "}
+                        <span className="font-medium text-foreground">Admin Console → Users</span> in one step.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <button
@@ -566,7 +625,7 @@ export function UsersTab({ initialUsers, currentUserId, onRefreshNeeded }: Users
               {isCheckingOrphan ? (
                 <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  Verifying orphan references across 7 database tables…
+                  Verifying orphan references across 29 database tables…
                 </div>
               ) : orphanResult && !orphanResult.canDelete ? (
                 /* Blocked Deletion Screen */

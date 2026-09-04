@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Phone, Shield, Pencil, MessageSquare } from "lucide-react";
+import { Mail, Phone, Shield, Pencil, MessageSquare, Lock } from "lucide-react";
 import type { UserContactProfile } from "@/lib/queries/profile";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -64,19 +64,28 @@ export function ContactCard({ profile, isOwnProfile, currentUserId }: ContactCar
         </div>
 
         <div className="mt-6 pt-6 border-t border-border space-y-3">
-          <div className="flex items-center gap-3 text-sm">
-            <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-foreground truncate">{profile.email}</span>
-          </div>
+          {profile.contactHidden ? (
+            <div className="flex items-center gap-3 text-sm">
+              <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground italic">Contact details are private</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="text-foreground truncate">{profile.email}</span>
+              </div>
 
-          <div className="flex items-center gap-3 text-sm">
-            <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-            {profile.phone ? (
-              <span className="text-foreground">{profile.phone}</span>
-            ) : (
-              <span className="text-muted-foreground italic">No phone number added</span>
-            )}
-          </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                {profile.phone ? (
+                  <span className="text-foreground">{profile.phone}</span>
+                ) : (
+                  <span className="text-muted-foreground italic">No phone number added</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {isOwnProfile ? (
