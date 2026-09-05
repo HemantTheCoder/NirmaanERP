@@ -36,6 +36,7 @@ const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
   { value: "contract", label: "Legal Contract & Agreement" },
   { value: "report",   label: "Site Inspection & Quality Report" },
   { value: "photo",    label: "Site Progress Photo" },
+  { value: "om_manual", label: "O&M Manual" },
   { value: "other",    label: "Other Document" },
 ];
 

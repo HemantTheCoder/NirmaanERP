@@ -13,6 +13,7 @@ export interface ClientProjectItem {
   client_id: string | null;
   client_approved: boolean;
   client_approved_at: string | null;
+  warranty_end_date: string | null;
   tasks: any[];
   completed_tasks_count: number;
   total_tasks_count: number;
@@ -57,6 +58,7 @@ export async function getClientProjects(
       client_id: p.client_id,
       client_approved: p.client_approved ?? false,
       client_approved_at: p.client_approved_at || null,
+      warranty_end_date: p.warranty_end_date || null,
       tasks: tasksList,
       completed_tasks_count: completed,
       total_tasks_count: total,

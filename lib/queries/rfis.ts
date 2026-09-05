@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { TaskPriority } from "./tasks";
+import type { AnnotationShape } from "./punch_list";
 
 export type RfiStatus = "open" | "answered" | "closed";
 export type ChangeOrderStatus = "draft" | "pending_approval" | "approved" | "rejected" | "implemented";
@@ -23,6 +24,10 @@ export interface RfiWithDetails {
   responded_at: string | null;
   due_date: string | null;
   created_at: string;
+  /** Optional site photo this RFI references, in the punch-photos bucket. */
+  photo_path: string | null;
+  /** A single pin shape marking the location on photo_path — see punch_items.annotation_data for the same format. */
+  pin_data: AnnotationShape | null;
 }
 
 export interface ChangeOrderWithDetails {
@@ -88,6 +93,8 @@ export async function getProjectRfis(
     responded_at: r.responded_at,
     due_date: r.due_date,
     created_at: r.created_at,
+    photo_path: r.photo_path ?? null,
+    pin_data: r.pin_data ?? null,
   }));
 }
 
@@ -124,6 +131,8 @@ export async function getRfis(
     responded_at: r.responded_at,
     due_date: r.due_date,
     created_at: r.created_at,
+    photo_path: r.photo_path ?? null,
+    pin_data: r.pin_data ?? null,
   }));
 }
 
@@ -140,6 +149,8 @@ export async function createRfi(
     assigned_to?: string;
     due_date?: string;
     raised_by: string;
+    photo_path?: string | null;
+    pin_data?: AnnotationShape | null;
   }
 ) {
   const { data, error } = await (supabase.from("rfis") as any)

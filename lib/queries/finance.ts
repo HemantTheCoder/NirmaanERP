@@ -22,6 +22,7 @@ export interface ExpenseItem {
   rejection_reason: string | null;
   created_at: string;
   approved_at: string | null;
+  cost_code_id: string | null;
   logger?: {
     full_name: string;
     email: string;
@@ -30,6 +31,20 @@ export interface ExpenseItem {
     full_name: string;
     email: string;
   } | null;
+  cost_code?: {
+    code: string;
+    name: string;
+  } | null;
+}
+
+export interface CostCodeBudgetLine {
+  costCodeId: string;
+  code: string;
+  name: string;
+  budgetedAmount: number;
+  approvedSpend: number;
+  pendingSpend: number;
+  variance: number; // positive = under budget
 }
 
 export interface ProjectBudgetSummary {
@@ -39,6 +54,7 @@ export interface ProjectBudgetSummary {
   remainingBudget: number | null;
   usedPercentage: number | null;
   categoryBreakdown: Record<ExpenseCategory, number>;
+  costCodeBreakdown: CostCodeBudgetLine[];
   expenses: ExpenseItem[];
 }
 
@@ -84,12 +100,20 @@ export async function getProjectBudgetSummary(
     .select(`
       *,
       logger:users!expenses_logged_by_fkey(full_name, email),
-      approver:users!expenses_approved_by_fkey(full_name, email)
+      approver:users!expenses_approved_by_fkey(full_name, email),
+      cost_code:cost_codes(code, name)
     `)
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   const { data: rawExpenses, error } = await query;
+
+  // Cost codes are their own small per-project table (lib/queries/costCodes.ts
+  // owns the CRUD); fetched here too so the breakdown can be computed even for
+  // codes with zero expenses logged against them yet.
+  const { data: rawCostCodes } = await (supabase.from("cost_codes") as any)
+    .select("*")
+    .eq("project_id", projectId);
 
   if (error || !rawExpenses) {
     console.error("Error fetching project expenses:", error);
@@ -106,6 +130,7 @@ export async function getProjectBudgetSummary(
         subcontractor: 0,
         other: 0,
       },
+      costCodeBreakdown: [],
       expenses: [],
     };
   }
@@ -142,6 +167,27 @@ export async function getProjectBudgetSummary(
       ? Math.round((totalApprovedSpend / budgetAllocated) * 100)
       : null;
 
+  // 4. Budget-vs-actual per cost code (only meaningful for admin/pm, same as
+  // budgetAllocated above — site_staff still gets cost codes on the expense
+  // form, just not this comparison view).
+  const costCodeBreakdown: CostCodeBudgetLine[] = isStaff
+    ? (rawCostCodes || []).map((c: any) => {
+        const linkedExpenses = expenses.filter((e) => e.cost_code_id === c.id);
+        const approvedSpend = linkedExpenses.filter((e) => e.status === "approved").reduce((s, e) => s + e.amount, 0);
+        const pendingSpend = linkedExpenses.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
+        const budgetedAmount = Number(c.budgeted_amount);
+        return {
+          costCodeId: c.id,
+          code: c.code,
+          name: c.name,
+          budgetedAmount,
+          approvedSpend,
+          pendingSpend,
+          variance: budgetedAmount - approvedSpend,
+        };
+      })
+    : [];
+
   return {
     budgetAllocated,
     totalApprovedSpend,
@@ -149,6 +195,7 @@ export async function getProjectBudgetSummary(
     remainingBudget,
     usedPercentage,
     categoryBreakdown,
+    costCodeBreakdown,
     expenses,
   };
 }
@@ -163,6 +210,7 @@ export async function logExpense(
     category: ExpenseCategory;
     amount: number;
     description: string;
+    cost_code_id?: string | null;
   },
   userId: string
 ): Promise<{ success: boolean; data?: ExpenseItem; error?: string }> {
@@ -172,12 +220,14 @@ export async function logExpense(
       category: input.category,
       amount: input.amount,
       description: input.description.trim(),
+      cost_code_id: input.cost_code_id || null,
       logged_by: userId,
       status: "pending",
     })
     .select(`
       *,
-      logger:users!expenses_logged_by_fkey(full_name, email)
+      logger:users!expenses_logged_by_fkey(full_name, email),
+      cost_code:cost_codes(code, name)
     `)
     .single();
 

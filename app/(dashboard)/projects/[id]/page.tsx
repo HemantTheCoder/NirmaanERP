@@ -10,6 +10,9 @@ import { getTodayDpr, getProjectDprHistory } from "@/lib/queries/dpr";
 import { getOpenDelay, getDelayHistory } from "@/lib/queries/delays";
 import { getProjectTaskDependencies } from "@/lib/queries/taskDependencies";
 import { getProjectPurchaseOrders } from "@/lib/queries/procurement";
+import { getProjectCostCodes } from "@/lib/queries/costCodes";
+import { getProjectBillingMilestones } from "@/lib/queries/billing";
+import { getProjectWarrantyClaims } from "@/lib/queries/warranty";
 import { ProjectDetailView } from "@/components/projects/ProjectDetailView";
 import type { UserRole } from "@/types/database";
 
@@ -68,6 +71,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     delayHistory,
     dependencies,
     purchaseOrders,
+    costCodes,
+    billingMilestones,
+    warrantyClaims,
   ] = await Promise.all([
     getProjectResources(supabase, id),
     getProjectDocuments(supabase, id),
@@ -80,6 +86,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     getDelayHistory(supabase, id),
     getProjectTaskDependencies(supabase, data.tasks.map((t: any) => t.id)),
     getProjectPurchaseOrders(supabase, id),
+    getProjectCostCodes(supabase, id),
+    getProjectBillingMilestones(supabase, id),
+    getProjectWarrantyClaims(supabase, id),
   ]);
 
   return (
@@ -96,6 +105,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       initialDelayHistory={delayHistory}
       initialDependencies={dependencies}
       initialPurchaseOrders={purchaseOrders}
+      initialCostCodes={costCodes}
+      initialBillingMilestones={billingMilestones}
+      initialWarrantyClaims={warrantyClaims}
       teamMembers={teamMembers}
       userId={user.id}
       userRole={userRole}

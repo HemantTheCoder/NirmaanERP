@@ -9,6 +9,8 @@ import { UpcomingMeetings } from "@/components/dashboard/UpcomingMeetings";
 import Link from "next/link";
 import { getInUseResourceCount } from "@/lib/queries/resources";
 import { getClientProjects, getClientDocuments } from "@/lib/queries/client";
+import { getProjectBillingMilestones } from "@/lib/queries/billing";
+import { getProjectWarrantyClaims } from "@/lib/queries/warranty";
 import { ClientPortalView } from "@/components/client/ClientPortalView";
 import type { UserRole } from "@/types/database";
 import { getReportsData } from "@/lib/queries/reports";
@@ -47,9 +49,11 @@ export default async function DashboardPage() {
     const clientProjects = await getClientProjects(supabase, user.id);
     const activeProject = clientProjects[0];
 
-    const [clientDocs, upcomingMeetings] = await Promise.all([
+    const [clientDocs, upcomingMeetings, billingMilestones, warrantyClaims] = await Promise.all([
       activeProject ? getClientDocuments(supabase, activeProject.id) : Promise.resolve([]),
       getUpcomingMeetings(supabase, 5),
+      activeProject ? getProjectBillingMilestones(supabase, activeProject.id) : Promise.resolve([]),
+      activeProject ? getProjectWarrantyClaims(supabase, activeProject.id) : Promise.resolve([]),
     ]);
 
     return (
@@ -62,6 +66,8 @@ export default async function DashboardPage() {
         projects={clientProjects}
         initialDocuments={clientDocs}
         meetings={upcomingMeetings}
+        initialBillingMilestones={billingMilestones}
+        initialWarrantyClaims={warrantyClaims}
       />
     );
   }

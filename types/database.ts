@@ -612,7 +612,7 @@ export interface Database {
 
 export type ResourceType = "material" | "equipment" | "labor";
 export type ResourceStatus = "requested" | "approved" | "in_use" | "released" | "rejected";
-export type DocumentCategory = "drawing" | "contract" | "report" | "photo" | "other";
+export type DocumentCategory = "drawing" | "contract" | "report" | "photo" | "om_manual" | "other";
 export type DocumentDiffStatus = "pending" | "complete" | "failed";
 export type GrievanceCategory = "safety" | "hr" | "equipment" | "other";
 export type GrievanceStatus = "open" | "in_progress" | "resolved" | "closed";

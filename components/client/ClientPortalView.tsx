@@ -18,6 +18,8 @@ import {
   FileCode,
   File,
   ShieldCheck,
+  Receipt,
+  IndianRupee,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { approveProjectProgress, type ClientProjectItem } from "@/lib/queries/client";
@@ -27,6 +29,9 @@ import { SignatureConfirmModal } from "@/components/shared/SignatureConfirmModal
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import type { UpcomingMeetingItem } from "@/lib/queries/meetings";
+import type { BillingMilestone, BillingMilestoneStatus } from "@/lib/queries/billing";
+import type { WarrantyClaim } from "@/lib/queries/warranty";
+import { WarrantyClaimsView } from "@/components/projects/WarrantyClaimsView";
 import { cn } from "@/lib/utils";
 
 interface ClientPortalViewProps {
@@ -38,7 +43,15 @@ interface ClientPortalViewProps {
   projects: ClientProjectItem[];
   initialDocuments: ProjectDocumentItem[];
   meetings: UpcomingMeetingItem[];
+  initialBillingMilestones: BillingMilestone[];
+  initialWarrantyClaims: WarrantyClaim[];
 }
+
+const CLIENT_BILLING_STATUS_BADGES: Record<BillingMilestoneStatus, { label: string; bg: string; text: string }> = {
+  pending: { label: "Pending", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
+  invoiced: { label: "Invoice Sent", bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-800 dark:text-amber-300" },
+  paid: { label: "Paid", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-300" },
+};
 
 function getFileIcon(fileName: string, mimeType: string) {
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
@@ -63,6 +76,8 @@ export function ClientPortalView({
   projects: initialProjects,
   initialDocuments,
   meetings,
+  initialBillingMilestones,
+  initialWarrantyClaims,
 }: ClientPortalViewProps) {
   const supabase = createClient();
   const [projectList, setProjectList] = useState<ClientProjectItem[]>(initialProjects);
@@ -261,6 +276,51 @@ export function ClientPortalView({
         <div className="text-center py-12 bg-card border border-border rounded-2xl">
           <Building2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm font-semibold text-foreground">No active client projects linked.</p>
+        </div>
+      )}
+
+      {/* Billing & Payment Milestones (read-only) */}
+      {initialBillingMilestones.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-indigo-500" /> Billing & Payment Milestones
+          </h3>
+          <div className="divide-y divide-border">
+            {initialBillingMilestones.map((m) => {
+              const statusCfg = CLIENT_BILLING_STATUS_BADGES[m.status];
+              return (
+                <div key={m.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-bold text-foreground">{m.title}</p>
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full", statusCfg.bg, statusCfg.text)}>
+                        {statusCfg.label}
+                      </span>
+                    </div>
+                    {m.description && <p className="text-[11px] text-muted-foreground mt-0.5">{m.description}</p>}
+                    {m.due_date && <p className="text-[11px] text-muted-foreground mt-0.5">Due {m.due_date}</p>}
+                  </div>
+                  <span className="text-sm font-bold text-foreground flex items-center shrink-0">
+                    <IndianRupee className="w-3.5 h-3.5" />
+                    {m.amount.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Warranty Claims — client can report an issue and see status, but not close it out */}
+      {activeProject && (
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <WarrantyClaimsView
+            projectId={activeProject.id}
+            initialClaims={initialWarrantyClaims}
+            userId={user.id}
+            canManage={false}
+            warrantyEndDate={activeProject.warranty_end_date}
+          />
         </div>
       )}
 

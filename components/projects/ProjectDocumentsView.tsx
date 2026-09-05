@@ -43,6 +43,7 @@ const CATEGORY_CONFIG: Record<DocumentCategory, { label: string; bg: string; tex
   contract: { label: "Contract", bg: "bg-amber-100 dark:bg-amber-950/60",   text: "text-amber-800 dark:text-amber-300" },
   report:   { label: "Report",   bg: "bg-emerald-100 dark:bg-emerald-950/60",text: "text-emerald-800 dark:text-emerald-300" },
   photo:    { label: "Photo",    bg: "bg-violet-100 dark:bg-violet-950/60", text: "text-violet-800 dark:text-violet-300" },
+  om_manual:{ label: "O&M Manual", bg: "bg-cyan-100 dark:bg-cyan-950/60",   text: "text-cyan-800 dark:text-cyan-300" },
   other:    { label: "Other",    bg: "bg-slate-100 dark:bg-slate-800",       text: "text-slate-700 dark:text-slate-300" },
 };
 

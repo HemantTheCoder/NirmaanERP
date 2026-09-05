@@ -14,6 +14,8 @@ import {
   PieChart as PieIcon,
   TrendingDown,
   TrendingUp,
+  Hash,
+  Trash2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -31,6 +33,7 @@ import {
   type ExpenseCategory,
   type ExpenseItem,
 } from "@/lib/queries/finance";
+import { createCostCode, deleteCostCode, type CostCode } from "@/lib/queries/costCodes";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -38,6 +41,7 @@ import { cn } from "@/lib/utils";
 interface ProjectBudgetViewProps {
   projectId: string;
   initialSummary: ProjectBudgetSummary;
+  initialCostCodes: CostCode[];
   user: {
     id: string;
     role: UserRole;
@@ -69,10 +73,12 @@ const STATUS_BADGES: Record<string, { label: string; bg: string; text: string }>
 export function ProjectBudgetView({
   projectId,
   initialSummary,
+  initialCostCodes,
   user,
 }: ProjectBudgetViewProps) {
   const supabase = createClient();
   const [summary, setSummary] = useState<ProjectBudgetSummary>(initialSummary);
+  const [costCodes, setCostCodes] = useState<CostCode[]>(initialCostCodes);
 
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [rejectingExpense, setRejectingExpense] = useState<ExpenseItem | null>(null);
@@ -82,6 +88,16 @@ export function ProjectBudgetView({
   const [category, setCategory] = useState<ExpenseCategory>("materials");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [costCodeId, setCostCodeId] = useState("");
+
+  // Cost Code (WBS budget line) management
+  const [isCostCodeModalOpen, setIsCostCodeModalOpen] = useState(false);
+  const [newCostCode, setNewCostCode] = useState("");
+  const [newCostCodeName, setNewCostCodeName] = useState("");
+  const [newCostCodeBudget, setNewCostCodeBudget] = useState("");
+  const [isSubmittingCostCode, setIsSubmittingCostCode] = useState(false);
+  const [costCodeError, setCostCodeError] = useState<string | null>(null);
+  const [deletingCostCodeId, setDeletingCostCodeId] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -117,6 +133,7 @@ export function ProjectBudgetView({
         category,
         amount: numAmount,
         description: description.trim(),
+        cost_code_id: costCodeId || null,
       },
       user.id
     );
@@ -131,11 +148,15 @@ export function ProjectBudgetView({
       setCategory("materials");
       setAmount("");
       setDescription("");
+      setCostCodeId("");
 
       // Update local state
       setSummary((prev) => ({
         ...prev,
         totalPendingSpend: prev.totalPendingSpend + numAmount,
+        costCodeBreakdown: costCodeId
+          ? prev.costCodeBreakdown.map((c) => (c.costCodeId === costCodeId ? { ...c, pendingSpend: c.pendingSpend + numAmount } : c))
+          : prev.costCodeBreakdown,
         expenses: [res.data!, ...prev.expenses],
       }));
     }
@@ -174,6 +195,19 @@ export function ProjectBudgetView({
           [expense.category]: (prev.categoryBreakdown[expense.category] || 0) + expense.amount,
         };
 
+        const newCostCodeBreakdown = expense.cost_code_id
+          ? prev.costCodeBreakdown.map((c) =>
+              c.costCodeId === expense.cost_code_id
+                ? {
+                    ...c,
+                    approvedSpend: c.approvedSpend + expense.amount,
+                    pendingSpend: Math.max(0, c.pendingSpend - expense.amount),
+                    variance: c.budgetedAmount - (c.approvedSpend + expense.amount),
+                  }
+                : c
+            )
+          : prev.costCodeBreakdown;
+
         return {
           ...prev,
           totalApprovedSpend: newApprovedSpend,
@@ -181,6 +215,7 @@ export function ProjectBudgetView({
           remainingBudget: newRemaining,
           usedPercentage: newPct,
           categoryBreakdown: newBreakdown,
+          costCodeBreakdown: newCostCodeBreakdown,
           expenses: updatedExpenses,
         };
       });
@@ -235,6 +270,64 @@ export function ProjectBudgetView({
       setRejectingExpense(null);
       setRejectionReason("");
     }
+  };
+
+  const handleCreateCostCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCostCodeError(null);
+
+    if (!newCostCode.trim() || !newCostCodeName.trim()) {
+      setCostCodeError("Code and name are both required.");
+      return;
+    }
+    const budgetedAmount = Number(newCostCodeBudget) || 0;
+    if (budgetedAmount < 0) {
+      setCostCodeError("Budgeted amount can't be negative.");
+      return;
+    }
+
+    setIsSubmittingCostCode(true);
+    const res = await createCostCode(
+      supabase,
+      { project_id: projectId, code: newCostCode.trim(), name: newCostCodeName.trim(), budgeted_amount: budgetedAmount },
+      user.id
+    );
+    setIsSubmittingCostCode(false);
+
+    if (!res.success || !res.data) {
+      setCostCodeError(res.error || "Failed to create cost code.");
+      return;
+    }
+
+    setCostCodes((prev) => [...prev, res.data!].sort((a, b) => a.code.localeCompare(b.code)));
+    setSummary((prev) => ({
+      ...prev,
+      costCodeBreakdown: [
+        ...prev.costCodeBreakdown,
+        { costCodeId: res.data!.id, code: res.data!.code, name: res.data!.name, budgetedAmount, approvedSpend: 0, pendingSpend: 0, variance: budgetedAmount },
+      ],
+    }));
+    setNewCostCode("");
+    setNewCostCodeName("");
+    setNewCostCodeBudget("");
+    setIsCostCodeModalOpen(false);
+  };
+
+  const handleDeleteCostCode = async (id: string) => {
+    setDeletingCostCodeId(id);
+    const res = await deleteCostCode(supabase, id);
+    setDeletingCostCodeId(null);
+
+    if (!res.success) {
+      setErrorMsg(res.error || "Failed to delete cost code.");
+      return;
+    }
+
+    setCostCodes((prev) => prev.filter((c) => c.id !== id));
+    setSummary((prev) => ({
+      ...prev,
+      costCodeBreakdown: prev.costCodeBreakdown.filter((c) => c.costCodeId !== id),
+    }));
   };
 
   // Recharts Chart Data
@@ -418,6 +511,69 @@ export function ProjectBudgetView({
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* Cost Codes (WBS-level budget lines) */}
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-foreground">Cost Codes (WBS Budget Lines)</h3>
+              </div>
+              <button
+                onClick={() => setIsCostCodeModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-card border border-border hover:bg-secondary text-foreground rounded-lg transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Cost Code
+              </button>
+            </div>
+
+            {summary.costCodeBreakdown.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic py-4 text-center">
+                No cost codes yet — add one (e.g. &quot;03-3000 Concrete&quot;) to track budget vs. actual below the trade-category level.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-secondary/50 border-b border-border text-muted-foreground uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="px-3 py-2">Code</th>
+                      <th className="px-3 py-2">Name</th>
+                      <th className="px-3 py-2 text-right">Budgeted</th>
+                      <th className="px-3 py-2 text-right">Approved Spend</th>
+                      <th className="px-3 py-2 text-right">Pending</th>
+                      <th className="px-3 py-2 text-right">Variance</th>
+                      <th className="px-3 py-2 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {summary.costCodeBreakdown.map((c) => (
+                      <tr key={c.costCodeId} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-3 py-2.5 font-mono font-semibold text-foreground">{c.code}</td>
+                        <td className="px-3 py-2.5 text-foreground">{c.name}</td>
+                        <td className="px-3 py-2.5 text-right text-foreground">₹{c.budgetedAmount.toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2.5 text-right text-foreground">₹{c.approvedSpend.toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{c.pendingSpend > 0 ? `₹${c.pendingSpend.toLocaleString("en-IN")}` : "—"}</td>
+                        <td className={cn("px-3 py-2.5 text-right font-semibold", c.variance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>
+                          {c.variance < 0 ? "-" : ""}₹{Math.abs(c.variance).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            onClick={() => handleDeleteCostCode(c.costCodeId)}
+                            disabled={deletingCostCodeId === c.costCodeId}
+                            className="text-muted-foreground hover:text-rose-500 disabled:opacity-50"
+                            title="Delete cost code (linked expenses keep their amount, just lose the code)"
+                          >
+                            {deletingCostCodeId === c.costCodeId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -480,6 +636,11 @@ export function ProjectBudgetView({
 
                       {/* Description */}
                       <td className="px-4 py-3.5 max-w-xs truncate text-foreground font-medium">
+                        {expense.cost_code && (
+                          <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono font-semibold text-muted-foreground align-middle">
+                            {expense.cost_code.code}
+                          </span>
+                        )}
                         {expense.description}
                         {expense.rejection_reason && (
                           <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5 font-normal truncate">
@@ -578,6 +739,26 @@ export function ProjectBudgetView({
                 </select>
               </div>
 
+              {costCodes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Cost Code (Optional)
+                  </label>
+                  <select
+                    value={costCodeId}
+                    onChange={(e) => setCostCodeId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">No cost code</option>
+                    {costCodes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   Expense Amount (₹) <span className="text-rose-500">*</span>
@@ -622,6 +803,91 @@ export function ProjectBudgetView({
                 >
                   {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Submit Expense Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Cost Code Modal */}
+      {isCostCodeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+              <h3 className="font-bold text-foreground text-base flex items-center gap-2">
+                <Hash className="w-4 h-4 text-indigo-600" /> Add Cost Code
+              </h3>
+              <button onClick={() => setIsCostCodeModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCostCode} className="p-6 space-y-4">
+              {costCodeError && (
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs">
+                  {costCodeError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Code <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newCostCode}
+                    onChange={(e) => setNewCostCode(e.target.value)}
+                    placeholder="e.g. 03-3000"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Budgeted Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={newCostCodeBudget}
+                    onChange={(e) => setNewCostCodeBudget(e.target.value)}
+                    placeholder="e.g. 500000"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newCostCodeName}
+                  onChange={(e) => setNewCostCodeName(e.target.value)}
+                  placeholder="e.g. Concrete & Formwork"
+                  className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsCostCodeModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingCostCode}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-sm disabled:opacity-60"
+                >
+                  {isSubmittingCostCode && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Add Cost Code
                 </button>
               </div>
             </form>

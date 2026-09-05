@@ -20,6 +20,7 @@ import { CreateRfiModal } from "./CreateRfiModal";
 import { RespondRfiModal } from "./RespondRfiModal";
 import { CreateChangeOrderModal } from "./CreateChangeOrderModal";
 import { PrintExportButton } from "@/components/common/PrintExportButton";
+import { PunchItemAnnotator } from "@/components/projects/PunchItemAnnotator";
 
 interface RfiChangeOrdersViewProps {
   rfis: RfiWithDetails[];
@@ -253,6 +254,17 @@ export function RfiChangeOrdersView({ rfis, changeOrders, projects, teamMembers,
                   <h3 className="text-base font-bold text-foreground mb-1">{rfi.subject}</h3>
                   <p className="text-xs text-muted-foreground mb-2">{rfi.project_name}</p>
                   <p className="text-sm text-foreground mb-3">{rfi.question}</p>
+
+                  {rfi.photo_path && (
+                    <div className="mb-3 max-w-xs">
+                      <PunchItemAnnotator
+                        photoUrl={rfi.photo_path}
+                        initialShapes={rfi.pin_data ? [rfi.pin_data] : []}
+                        readOnly
+                        className="rounded-xl overflow-hidden border border-border"
+                      />
+                    </div>
+                  )}
 
                   {rfi.response && (
                     <div className="p-3 bg-muted/40 rounded-xl mb-3 text-sm">

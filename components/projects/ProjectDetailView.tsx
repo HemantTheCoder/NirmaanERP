@@ -18,6 +18,8 @@ import {
   FileCheck2,
   Plus,
   Sparkles,
+  Receipt,
+  ShieldCheck,
 } from "lucide-react";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ProjectGanttChart } from "@/components/projects/ProjectGanttChart";
@@ -40,6 +42,11 @@ import type { UserRole } from "@/types/database";
 import { cn } from "@/lib/utils";
 import type { TaskDependencyLink } from "@/lib/queries/taskDependencies";
 import type { PurchaseOrderWithDetails } from "@/lib/queries/procurement";
+import type { CostCode } from "@/lib/queries/costCodes";
+import type { BillingMilestone } from "@/lib/queries/billing";
+import { BillingMilestonesView } from "@/components/projects/BillingMilestonesView";
+import type { WarrantyClaim } from "@/lib/queries/warranty";
+import { WarrantyClaimsView } from "@/components/projects/WarrantyClaimsView";
 import { computeCriticalPath } from "@/lib/utils/criticalPath";
 import { computeDelayRisk } from "@/lib/utils/delayRisk";
 import { averageDaysToRectify } from "@/lib/queries/delays";
@@ -53,6 +60,7 @@ interface ProjectDetailViewProps {
     start_date: string | null;
     end_date: string | null;
     manager_name: string | null;
+    warranty_end_date?: string | null;
   };
   initialTasks: any[];
   initialResources: ResourceAllocationItem[];
@@ -65,6 +73,9 @@ interface ProjectDetailViewProps {
   initialDelayHistory: ProjectDelay[];
   initialDependencies: TaskDependencyLink[];
   initialPurchaseOrders: PurchaseOrderWithDetails[];
+  initialCostCodes: CostCode[];
+  initialBillingMilestones: BillingMilestone[];
+  initialWarrantyClaims: WarrantyClaim[];
   teamMembers?: any[];
   userId: string;
   userRole: UserRole;
@@ -83,6 +94,9 @@ export function ProjectDetailView({
   initialDelayHistory,
   initialDependencies,
   initialPurchaseOrders,
+  initialCostCodes,
+  initialBillingMilestones,
+  initialWarrantyClaims,
   teamMembers = [],
   userId,
   userRole,
@@ -91,7 +105,7 @@ export function ProjectDetailView({
 
   const [tasks, setTasks] = useState<any[]>(initialTasks);
   const [dependencies, setDependencies] = useState<TaskDependencyLink[]>(initialDependencies);
-  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "punch_list" | "dpr" | "ai_chat">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "timeline" | "resources" | "documents" | "budget" | "billing" | "warranty" | "punch_list" | "dpr" | "ai_chat">("tasks");
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -302,6 +316,32 @@ export function ProjectDetailView({
             </button>
 
             <button
+              onClick={() => setActiveTab("billing")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "billing"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Receipt className="w-3.5 h-3.5 text-indigo-600" />
+              Billing
+            </button>
+
+            <button
+              onClick={() => setActiveTab("warranty")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "warranty"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Warranty
+            </button>
+
+            <button
               onClick={() => setActiveTab("punch_list")}
               className={cn(
                 "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
@@ -460,7 +500,28 @@ export function ProjectDetailView({
           <ProjectBudgetView
             projectId={project.id}
             initialSummary={initialBudgetSummary}
+            initialCostCodes={initialCostCodes}
             user={{ id: userId, role: userRole }}
+          />
+        )}
+
+        {/* Tab 5b: Billing */}
+        {activeTab === "billing" && (
+          <BillingMilestonesView
+            projectId={project.id}
+            initialMilestones={initialBillingMilestones}
+            user={{ id: userId, role: userRole }}
+          />
+        )}
+
+        {/* Tab 5c: Warranty */}
+        {activeTab === "warranty" && (
+          <WarrantyClaimsView
+            projectId={project.id}
+            initialClaims={initialWarrantyClaims}
+            userId={userId}
+            canManage={userRole === "admin" || userRole === "project_manager" || userRole === "site_staff"}
+            warrantyEndDate={project.warranty_end_date}
           />
         )}
 

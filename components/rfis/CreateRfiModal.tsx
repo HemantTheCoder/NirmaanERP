@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Upload, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createRfi } from "@/lib/queries/rfis";
+import { uploadPunchPhoto, type AnnotationShape } from "@/lib/queries/punch_list";
+import { PunchItemAnnotator } from "@/components/projects/PunchItemAnnotator";
 import type { TaskPriority } from "@/lib/queries/tasks";
 
 interface CreateRfiModalProps {
@@ -26,6 +28,13 @@ export function CreateRfiModal({ isOpen, onClose, userId, projects, teamMembers,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Optional photo + location pin — reuses the same annotation pattern as
+  // the punch list, so an RFI can point at a spot on a photo instead of
+  // only describing it in text.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [pinShapes, setPinShapes] = useState<AnnotationShape[]>([]);
+
   if (!isOpen) return null;
 
   function resetAndClose() {
@@ -36,13 +45,49 @@ export function CreateRfiModal({ isOpen, onClose, userId, projects, teamMembers,
     setAssignedTo("");
     setDueDate("");
     setError(null);
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setPinShapes([]);
     onClose();
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Photo exceeds 10MB limit.");
+      return;
+    }
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Invalid file type. Please upload a JPG, PNG, or WEBP image.");
+      return;
+    }
+
+    setError(null);
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
+    setPinShapes([]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+
+    let photoPath: string | null = null;
+    if (photoFile) {
+      const uploadRes = await uploadPunchPhoto(supabase, photoFile);
+      if (uploadRes.error) {
+        setError(`Photo upload failed: ${uploadRes.error}`);
+        setIsSubmitting(false);
+        return;
+      }
+      photoPath = uploadRes.publicUrl || null;
+    }
 
     const { error: createError } = await createRfi(supabase, {
       project_id: projectId,
@@ -52,6 +97,8 @@ export function CreateRfiModal({ isOpen, onClose, userId, projects, teamMembers,
       assigned_to: assignedTo || undefined,
       due_date: dueDate || undefined,
       raised_by: userId,
+      photo_path: photoPath,
+      pin_data: pinShapes.length > 0 ? pinShapes[pinShapes.length - 1] : null,
     });
 
     if (createError) {
@@ -138,6 +185,41 @@ export function CreateRfiModal({ isOpen, onClose, userId, projects, teamMembers,
                 className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" />
+              Reference Photo (Optional)
+            </label>
+            {!photoPreviewUrl ? (
+              <label className="mt-1 flex items-center gap-2 px-3 py-2.5 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:border-indigo-500/60 hover:bg-secondary/40 cursor-pointer transition-all">
+                <Upload className="w-3.5 h-3.5" />
+                Upload a site photo and mark the exact spot this RFI is about
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="hidden" />
+              </label>
+            ) : (
+              <div className="mt-1 space-y-1.5">
+                <PunchItemAnnotator
+                  photoUrl={photoPreviewUrl}
+                  initialShapes={pinShapes}
+                  onChange={(shapes) => setPinShapes(shapes.slice(-1))}
+                />
+                <p className="text-[11px] text-muted-foreground">Mark the location on the photo — only the most recent marker is saved.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    URL.revokeObjectURL(photoPreviewUrl);
+                    setPhotoFile(null);
+                    setPhotoPreviewUrl(null);
+                    setPinShapes([]);
+                  }}
+                  className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:underline"
+                >
+                  Remove photo
+                </button>
+              </div>
+            )}
           </div>
 
           <div>
